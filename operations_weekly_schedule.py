@@ -113,15 +113,11 @@ session.auth = ("kenneth.mcmillan", "Quango76")
 response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON2_TRAINING_PLAN&updategroup=true")
 response.raise_for_status()
 soup = BeautifulSoup(response.text, 'html.parser')
-table = pd.read_html(response.text)
-
-headers = [th.text.strip() for th in table.find_all('th')]
-
-data = [[td.text.strip() for td in row.find_all('td')] for row in table.find_all('tr')[1:]]
-
+data = pd.read_html(response.text)[0]
 
 # Create DataFrame and clean data
-df = pd.DataFrame(data, columns=headers).drop(columns=['About'], errors='ignore').drop_duplicates()
+df = data.drop(columns=['About'], errors='ignore').drop_duplicates()
+
 df.columns = df.columns.str.replace(' ', '_')  # Replace spaces in column headers
 df['Group'] = df.apply(
     lambda row: f"{row['Sport']}-{row['Coach']}" 

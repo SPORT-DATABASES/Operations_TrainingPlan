@@ -95,12 +95,9 @@ def generate_excel(selected_date):
     session.auth = ("kenneth.mcmillan", "Quango76")
     response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON3_TRAINING_PLAN&updategroup=true")
     response.raise_for_status()
-   # soup = BeautifulSoup(response.text, 'html.parser')
-    table = pd.read_html(response.text)
-   # table = soup.find('table')
-    headers = [th.text.strip() for th in table.find_all('th')]
-    data = [[td.text.strip() for td in row.find_all('td')] for row in table.find_all('tr')[1:]]
-    df = pd.DataFrame(data, columns=headers).drop(columns=['About'], errors='ignore').drop_duplicates()
+    data = pd.read_html(response.text)[0]
+    df = data.drop(columns=['About'], errors='ignore').drop_duplicates()
+
     df.columns = df.columns.str.replace(' ', '_')
     df['Start_Time'] = pd.to_numeric(df['Start_Time'], errors='coerce').apply(lambda x: convert_to_time(x))
     df['Finish_Time'] = pd.to_numeric(df['Finish_Time'], errors='coerce').apply(lambda x: convert_to_time(x))
