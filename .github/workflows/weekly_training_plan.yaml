@@ -1,0 +1,26 @@
+name: "Weekly Training Plan Update"
+
+on:
+  # Schedule (cron) is in UTC time. 
+  # Doha is UTC+3, so 12:45 PM in Doha = 09:45 UTC.
+  schedule:
+    - cron: '45 9 * * 4'  # runs every Thursday at 09:45 UTC
+  workflow_dispatch:  # manual trigger from the Actions tab
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'  # or whichever version you need
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Python script
+        run: python weekly_training_plan_email.py  # replace with the correct script filename
