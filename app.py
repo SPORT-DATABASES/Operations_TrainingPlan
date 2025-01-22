@@ -187,7 +187,7 @@ def generate_excel(selected_date):
     # Add dates to the template
     date_cells = ['C4', 'E4', 'G4', 'I4', 'K4', 'M4', 'O4']
     for idx, cell in enumerate(date_cells):
-        day_offset = idx if cell != 'M4' else idx + 1
+        day_offset = idx
         template_sheet[cell].value = (start_date + timedelta(days=day_offset)).strftime('%a %d %b %Y')
         template_sheet[cell].alignment = Alignment(horizontal="center", vertical="center")
 
