@@ -37,11 +37,13 @@ def format_session(group):
     venues = []
     times = set()
     for _, row in group.iterrows():
-        venues.append(row['Venue'])
-        times.add(f"{row['Start_Time']}-{row['Finish_Time']}")
-    venue_str = ' + '.join(venues)
-    time_str = "\n".join(sorted(times)) if times else ''
+        venues.append(str(row['Venue']) if pd.notnull(row['Venue']) else '')  # Ensure Venue is a string
+        times.add(f"{str(row['Start_Time']) if pd.notnull(row['Start_Time']) else ''}-"
+                  f"{str(row['Finish_Time']) if pd.notnull(row['Finish_Time']) else ''}")
+    venue_str = ' + '.join(filter(None, venues))  # Join only non-empty venues
+    time_str = "\n".join(sorted(filter(None, times))) if times else ''
     return f"{venue_str}\n{time_str}"
+
 
 # Function to paste filtered data into the Template sheet
 def paste_filtered_data_to_template(pivot_df, workbook, sport, training_group, start_cell):
