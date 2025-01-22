@@ -113,7 +113,7 @@ session = requests.Session()
 session.auth = ("kenneth.mcmillan", "Quango76")  # Adjust if needed
 response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON3_TRAINING_PLAN&updategroup=true")
 response.raise_for_status()
-soup = BeautifulSoup(response.text, 'html.parser')
+
 data = pd.read_html(StringIO(response.text))[0]
 df = data.drop(columns=['About'], errors='ignore').drop_duplicates()
 
