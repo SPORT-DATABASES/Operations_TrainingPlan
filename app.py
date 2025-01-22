@@ -10,6 +10,28 @@ from openpyxl.styles import Alignment
 import shutil
 import os
 
+# ---- Page Configuration ----
+st.set_page_config(
+    page_title="Operations - Weekly Training Plan",
+    layout="wide",  # Use wide layout
+    initial_sidebar_state="expanded"
+)
+
+# ---- Custom CSS to hide default Streamlit elements and reduce top spacing ----
+hide_streamlit_style = """
+<style>
+/* Hide the default hamburger menu and footer */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+
+/* Adjust top spacing */
+.block-container {
+    padding-top: 0rem;
+}
+</style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 # Function to adjust timestamps and convert to local time
 def convert_to_time(timestamp_ms, offset_hours=11):
     try:
@@ -201,7 +223,7 @@ def generate_excel(selected_date):
 ################################################################################################
 
 # Streamlit App
-st.title("Operations Training Plan Generator")
+st.title("Operations - Weekly Training Plan App")
 st.markdown("Generate an Excel report for any week (past or future).")
 
 # Date input
