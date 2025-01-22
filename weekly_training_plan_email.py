@@ -268,7 +268,7 @@ print(f"Data successfully saved to the workbook: {output_path}")
 # 6) Build the email body to include "no data found" messages
 body = (
     "Hi Alessandra,\n\n"
-    "Please find attached this week's Excel training plan.\n\n"
+    "Please find attached this week's Excel training plan. This is an automated email. \n\n"
     "Best Regards,\nKenny"
 )
 
@@ -287,7 +287,7 @@ sender_email = "kennymcmillan29@gmail.com"
 receiver_emails = ["kenneth.mcmillan@aspire.qa", "kennymcmillan29@gmail.com",
                     "alessandra.moretti@aspire.qa"]
 
-subject = "Weekly Athletics Plan"
+subject = "Weekly Training Plan - Automated Thursday Update"
 
 password = "lcsc pcuy pgxb zcri"
 
