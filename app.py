@@ -214,7 +214,7 @@ if st.button("Generate Report"):
         excel_file, pivot_df = generate_excel(selected_date)
 
         # Display the pivot DataFrame for debugging
-        st.markdown("### Pivot DataFrame")
+        st.markdown("### DataFrame for checking data")
         st.dataframe(pivot_df)
 
         # Provide download button for the generated Excel report
