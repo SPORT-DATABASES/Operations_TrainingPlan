@@ -184,7 +184,7 @@ pivot_df = pivot_df.applymap(lambda x: format_session_with_tabbed_time(x) if isi
 
 # Load the template and paste data
 template_path = "Excel_template.xlsx"
-output_filename = f"{next_sunday.strftime('%d%b')}_{next_saturday.strftime('%d%b')}.xlsx"
+output_filename = f"{next_sunday.strftime('%d%b')}_automated_email_update.xlsx"
 output_path = output_filename
 if os.path.exists(output_path):
     os.remove(output_path)
