@@ -284,7 +284,9 @@ for m in no_data_found_messages:
 
 # 7) Send the email with the attached Excel
 sender_email = "kennymcmillan29@gmail.com"
-receiver_emails = ["kenneth.mcmillan@aspire.qa", "kennymcmillan29@gmail.com"]
+receiver_emails = ["kenneth.mcmillan@aspire.qa", "kennymcmillan29@gmail.com",
+                    "alessandra.moretti@aspire.qa"]
+
 subject = "Weekly Athletics Plan"
 
 password = "lcsc pcuy pgxb zcri"
@@ -293,6 +295,7 @@ msg = MIMEMultipart()
 msg['From'] = sender_email
 msg['To'] = ", ".join(receiver_emails)
 msg['Subject'] = subject
+
 msg.attach(MIMEText(body, 'plain'))
 
 # Attach the Excel file
