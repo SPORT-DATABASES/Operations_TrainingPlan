@@ -107,7 +107,8 @@ def generate_excel(selected_date):
     # Drop rows where 'Sport' is blank (NaN or empty string)
     df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
 
-
+    df = df[df['Venue'] != 'AASMC']
+    
     # Filter and clean data
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce', dayfirst=True).dt.date
     filtered_df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
