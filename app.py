@@ -1,5 +1,6 @@
 import streamlit as st
 from io import BytesIO
+from io import StringIO
 import requests
 #from bs4 import BeautifulSoup
 import pandas as pd
@@ -97,7 +98,7 @@ def generate_excel(selected_date):
     session.auth = ("kenneth.mcmillan", "Quango76")
     response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON3_TRAINING_PLAN&updategroup=true")
     response.raise_for_status()
-    data = pd.read_html(response.text)[0]
+    data = pd.read_html(StringIO(response.text))[0]
     df = data.drop(columns=['About'], errors='ignore').drop_duplicates()
 
     df.columns = df.columns.str.replace(' ', '_')
@@ -108,9 +109,9 @@ def generate_excel(selected_date):
 
 
     # Filter and clean data
-    df['Date'] = pd.to_datetime(df['Date'], errors='coerce').dt.date
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce', dayfirst=True).dt.date
     filtered_df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
-    filtered_df['AM/PM'] = pd.Categorical(filtered_df['AM/PM'], categories=['AM', 'PM'], ordered=True)
+    filtered_df.loc[:, 'AM/PM'] = pd.Categorical(filtered_df['AM/PM'], categories=['AM', 'PM'], ordered=True)
     filtered_df = filtered_df.dropna(subset=['Sport']).sort_values(by=['Date', 'Sport', 'Coach', 'AM/PM'])
 
     # Group and pivot data
