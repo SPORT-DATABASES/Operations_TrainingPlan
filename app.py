@@ -1,7 +1,7 @@
 import streamlit as st
 from io import BytesIO
 import requests
-from bs4 import BeautifulSoup
+#from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime, timedelta, timezone
 from openpyxl import load_workbook
@@ -95,8 +95,9 @@ def generate_excel(selected_date):
     session.auth = ("kenneth.mcmillan", "Quango76")
     response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON3_TRAINING_PLAN&updategroup=true")
     response.raise_for_status()
-    soup = BeautifulSoup(response.text, 'html.parser')
-    table = soup.find('table')
+   # soup = BeautifulSoup(response.text, 'html.parser')
+    table = pd.read_html(response.text)
+   # table = soup.find('table')
     headers = [th.text.strip() for th in table.find_all('th')]
     data = [[td.text.strip() for td in row.find_all('td')] for row in table.find_all('tr')[1:]]
     df = pd.DataFrame(data, columns=headers).drop(columns=['About'], errors='ignore').drop_duplicates()
