@@ -113,7 +113,7 @@ def generate_excel(selected_date):
 
     # Fetch data
     session = requests.Session()
-    session.auth = ("sb_sap.etl", "A1s2p3!re")
+    session.auth = ("kenneth.mcmillan", "Quango76")
     response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON3_TRAINING_PLAN&updategroup=true")
     response.raise_for_status()
     data = pd.read_html(StringIO(response.text))[0]
