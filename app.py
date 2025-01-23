@@ -24,10 +24,6 @@ hide_streamlit_style = """
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 
-/* Adjust top spacing */
-.block-container {
-    padding-top: 0rem;
-}
 </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
