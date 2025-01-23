@@ -2,7 +2,6 @@ import streamlit as st
 from io import BytesIO
 from io import StringIO
 import requests
-#from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime, timedelta, timezone
 from openpyxl import load_workbook
@@ -23,7 +22,6 @@ hide_streamlit_style = """
 /* Hide the default hamburger menu and footer */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-
 </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -41,28 +39,19 @@ def convert_to_time(timestamp_ms, offset_hours=11):
 def ensure_all_columns(pivot_df, day_order):
     return pivot_df.reindex(columns=['Sport', 'Training_Group'] + day_order, fill_value=' ')
 
-# Function to format session strings with "and" and tab times under venues
-def format_session_with_tabbed_time(session):
-    if not session:
-        return ""
-    session = session.replace(' + ', ' and\n')  # Replace '+' with 'and\n' for better readability
-    lines = session.split('\n')
-    if len(lines) > 1:
-        lines[-1] = f"\t{lines[-1]}"  # Add tab before the time
-    return '\n'.join(lines)
-
 # Function to format session information for grouping
 def format_session(group):
-    venues = []
-    times = set()
+    venue_time_pairs = []
     for _, row in group.iterrows():
-        venues.append(str(row['Venue']) if pd.notnull(row['Venue']) else '')  # Ensure Venue is a string
-        times.add(f"{str(row['Start_Time']) if pd.notnull(row['Start_Time']) else ''}-"
-                  f"{str(row['Finish_Time']) if pd.notnull(row['Finish_Time']) else ''}")
-    venue_str = ' + '.join(filter(None, venues))  # Join only non-empty venues
-    time_str = "\n".join(sorted(filter(None, times))) if times else ''
-    return f"{venue_str}\n{time_str}"
+        venue = str(row['Venue']) if pd.notnull(row['Venue']) else ''  # Ensure Venue is a string
+        start_time = str(row['Start_Time']) if pd.notnull(row['Start_Time']) else ''
+        finish_time = str(row['Finish_Time']) if pd.notnull(row['Finish_Time']) else ''
+        time = f"{start_time}-{finish_time}" if start_time or finish_time else ''
 
+        if venue or time:  # Include only non-empty venue or time
+            venue_time_pairs.append(f"{venue} {time}".strip())
+
+    return ' + '.join(filter(None, venue_time_pairs))
 
 # Function to paste filtered data into the Template sheet
 def paste_filtered_data_to_template(pivot_df, workbook, sport, training_group, start_cell):
@@ -126,7 +115,7 @@ def generate_excel(selected_date):
     df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
 
     df = df[df['Venue'] != 'AASMC']
-    
+
     # Filter and clean data
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce', dayfirst=True).dt.date
     filtered_df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
@@ -170,24 +159,16 @@ def generate_excel(selected_date):
         {"sport": "Sprints", "training_group": "Sprints_Lee", "start_cell": "C22"},
         {"sport": "Sprints", "training_group": "Sprints_Hamdi", "start_cell": "C24"},
         {"sport": "Throws", "training_group": "Performance Throws", "start_cell": "C26"},
-        
         {"sport": "Squash", "training_group": "Squash", "start_cell": "C37"},
         {"sport": "Table Tennis", "training_group": "Table Tennis", "start_cell": "C39"},
         {"sport": "Fencing", "training_group": "Fencing", "start_cell": "C41"},
         {"sport": "Swimming", "training_group": "Swimming", "start_cell": "C43"},
         {"sport": "Padel", "training_group": "Padel", "start_cell": "C45"},
-        
-        #preacedemy padel is using concatenated function below C47
-        
         {"sport": "Pre Academy", "training_group": "Pre Academy Fencing", "start_cell": "C49"},
         {"sport": "Pre Academy", "training_group": "Pre Academy Squash Girls", "start_cell": "C51"},
         {"sport": "Pre Academy", "training_group": "Pre Academy Athletics", "start_cell": "C53"},
-        
-         #athletics girls  is using concatenated function below C55
-         
         {"sport": "Sprints", "training_group": "Sprints_Short", "start_cell": "C64"},
         {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C66"},
-        
     ]
 
     for row in rows_to_paste:
