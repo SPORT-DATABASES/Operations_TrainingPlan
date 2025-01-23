@@ -35,15 +35,17 @@ def format_session_with_tabbed_time(session):
 ###############################################################################
 # Function to format session information for a group
 def format_session(group):
-    venues = []
-    times = set()
+    venue_time_pairs = []
     for _, row in group.iterrows():
-        venues.append(str(row['Venue']) if pd.notnull(row['Venue']) else '')
-        times.add(f"{str(row['Start_Time']) if pd.notnull(row['Start_Time']) else ''}-"
-                  f"{str(row['Finish_Time']) if pd.notnull(row['Finish_Time']) else ''}")
-    venue_str = ' + '.join(filter(None, venues))  # Join only non-empty venues
-    time_str = "\n".join(sorted(filter(None, times))) if times else ''
-    return f"{venue_str}\n{time_str}"
+        venue = str(row['Venue']) if pd.notnull(row['Venue']) else ''  # Ensure Venue is a string
+        start_time = str(row['Start_Time']) if pd.notnull(row['Start_Time']) else ''
+        finish_time = str(row['Finish_Time']) if pd.notnull(row['Finish_Time']) else ''
+        time = f"{start_time}-{finish_time}" if start_time or finish_time else ''
+
+        if venue or time:  # Include only non-empty venue or time
+            venue_time_pairs.append(f"{venue} {time}".strip())
+
+    return ' + '.join(filter(None, venue_time_pairs))
 
 ###############################################################################
 # Function to ensure all expected columns are present in the pivot DataFrame
@@ -108,7 +110,7 @@ def paste_concatenated_data(pivot_df, workbook, sport, start_cell, no_data_found
 ###############################################################################
 # Main Script
 
-# 1) Fetch and parse the report
+# Fetch and parse the report
 session = requests.Session()
 session.auth = ("kenneth.mcmillan", "Quango76")  # Adjust if needed
 response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON3_TRAINING_PLAN&updategroup=true")
@@ -118,13 +120,6 @@ data = pd.read_html(StringIO(response.text))[0]
 df = data.drop(columns=['About'], errors='ignore').drop_duplicates()
 
 df.columns = df.columns.str.replace(' ', '_')  # Replace spaces in column headers
-df['Group'] = df.apply(
-    lambda row: f"{row['Sport']}-{row['Coach']}" 
-    if row['Sport'] == row['Training_Group'] 
-    else f"{row['Sport']}-{row['Training_Group']}-{row['Coach']}", 
-    axis=1
-)
-
 df['Start_Time'] = pd.to_numeric(df['Start_Time'], errors='coerce').apply(lambda x: convert_to_time(x))
 df['Finish_Time'] = pd.to_numeric(df['Finish_Time'], errors='coerce').apply(lambda x: convert_to_time(x))
 
@@ -134,34 +129,18 @@ df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
 # Exclude this venue
 df = df[df['Venue'] != 'AASMC']
 
+# Define date range for the next week
 today = datetime.now()
 next_sunday = today + timedelta(days=(6 - today.weekday()) % 7)
 next_saturday = next_sunday + timedelta(days=6)
 
 df['Date'] = pd.to_datetime(df['Date'], errors='coerce').dt.date
 df = df[(df['Date'] >= next_sunday.date()) & (df['Date'] <= next_saturday.date())]
-unique_dates = sorted(df['Date'].dropna().unique())
 
-df = (
-    df.dropna(subset=['Sport'])
-      .query("Sport.str.strip() != ''", engine='python')
-      .assign(
-          Date_long=lambda x: x['Date'].apply(lambda d: d.strftime('%a %d %b %Y') if pd.notnull(d) else None)
-      )
-      .drop(columns=['Date_Reverse'], errors='ignore')
-      .sort_values(by=['Date', 'Sport', 'Coach', 'AM/PM'])
-      .reset_index(drop=True)
-)
-df['AM/PM'] = pd.Categorical(df['AM/PM'], categories=['AM', 'PM'], ordered=True)
-df = df[['Date_long'] + [col for col in df.columns if col != 'Date_long']]
-df = df[~df['Day_AM/PM'].str.contains('Friday', na=False)]
-
-# 2) Group and pivot data
-grouped = df.groupby(['Sport', 'Training_Group', 'Day_AM/PM']).apply(
-    lambda group: format_session(group)
-).reset_index()
-
+# Group and pivot data
+grouped = df.groupby(['Sport', 'Training_Group', 'Day_AM/PM']).apply(format_session).reset_index()
 grouped.columns = ['Sport', 'Training_Group', 'Day_AM/PM', 'Session']
+
 pivot_df = pd.pivot_table(
     grouped,
     values='Session',
