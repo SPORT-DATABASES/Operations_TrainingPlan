@@ -148,6 +148,9 @@ def generate_excel(selected_date):
 
     # Insert data into the template
     rows_to_paste = [
+        
+        # first page
+        
         {"sport": "Development", "training_group": "Development 1", "start_cell": "C6"},
         {"sport": "Development", "training_group": "Development 2", "start_cell": "C8"},
         {"sport": "Development", "training_group": "Development 3", "start_cell": "C10"},
@@ -159,16 +162,30 @@ def generate_excel(selected_date):
         {"sport": "Sprints", "training_group": "Sprints_Lee", "start_cell": "C22"},
         {"sport": "Sprints", "training_group": "Sprints_Hamdi", "start_cell": "C24"},
         {"sport": "Throws", "training_group": "Performance Throws", "start_cell": "C26"},
+        
+        # second page
+        
         {"sport": "Squash", "training_group": "Squash", "start_cell": "C37"},
         {"sport": "Table Tennis", "training_group": "Table Tennis", "start_cell": "C39"},
         {"sport": "Fencing", "training_group": "Fencing", "start_cell": "C41"},
         {"sport": "Swimming", "training_group": "Swimming", "start_cell": "C43"},
         {"sport": "Padel", "training_group": "Padel", "start_cell": "C45"},
-        {"sport": "Pre Academy", "training_group": "Pre Academy Fencing", "start_cell": "C49"},
-        {"sport": "Pre Academy", "training_group": "Pre Academy Squash Girls", "start_cell": "C51"},
-        {"sport": "Pre Academy", "training_group": "Pre Academy Athletics", "start_cell": "C53"},
-        {"sport": "Sprints", "training_group": "Sprints_Short", "start_cell": "C64"},
-        {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C66"},
+        
+        {"sport": "Pre Academy Padel", "training_group": "Explorers", "start_cell": "C48"},
+        {"sport": "Pre Academy Padel", "training_group": "Explorers+", "start_cell": "C49"},
+        {"sport": "Pre Academy Padel", "training_group": "Starters", "start_cell": "C50"},
+        {"sport": "Pre Academy", "training_group": "Pre Academy Fencing", "start_cell": "C51"},
+        {"sport": "Pre Academy", "training_group": "Pre Academy Squash Girls", "start_cell": "C53"},
+        {"sport": "Pre Academy", "training_group": "Pre Academy Athletics", "start_cell": "C55"},
+        {"sport": "Girls Programe", "training_group": "Kids", "start_cell": "C58"},
+        {"sport": "Girls Programe", "training_group": "Mini Cadet_U14", "start_cell": "C59"},
+        {"sport": "Girls Programe", "training_group": "Cadet_U16", "start_cell": "C60"},
+        {"sport": "Girls Programe", "training_group": "Youth_U18", "start_cell": "C61"},
+        
+        # third page
+        
+        {"sport": "Sprints", "training_group": "Sprints_Short", "start_cell": "C69"},
+        {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C71"},
     ]
 
     for row in rows_to_paste:
@@ -180,8 +197,8 @@ def generate_excel(selected_date):
             start_cell=row["start_cell"],
         )
 
-    paste_concatenated_data(pivot_df, workbook, sport="Pre Academy Padel", start_cell="C47")
-    paste_concatenated_data(pivot_df, workbook, sport="Girls Programe", start_cell="C55")
+    #paste_concatenated_data(pivot_df, workbook, sport="Pre Academy Padel", start_cell="C47")
+    #paste_concatenated_data(pivot_df, workbook, sport="Girls Programe", start_cell="C55")
 
     # Add dates to the template
     date_cells = ['C4', 'E4', 'G4', 'I4', 'K4', 'M4', 'O4']

@@ -184,33 +184,45 @@ for idx, cell in enumerate(date_cells):
 no_data_found_messages = []
 
 rows_to_paste = [
-    {"sport": "Development", "training_group": "Development 1", "start_cell": "C6"},
-    {"sport": "Development", "training_group": "Development 2", "start_cell": "C8"},
-    {"sport": "Development", "training_group": "Development 3", "start_cell": "C10"},
-    {"sport": "Endurance", "training_group": "Endurance_Senior", "start_cell": "C12"},
-    {"sport": "Jumps", "training_group": "Jumps_PV", "start_cell": "C14"},
-    {"sport": "Jumps", "training_group": "Jumps_Martin Bercel", "start_cell": "C16"},
-    {"sport": "Jumps", "training_group": "Jumps_Ross Jeffs", "start_cell": "C18"},
-    {"sport": "Jumps", "training_group": "Jumps_ElWalid", "start_cell": "C20"},
-    {"sport": "Sprints", "training_group": "Sprints_Lee", "start_cell": "C22"},
-    {"sport": "Sprints", "training_group": "Sprints_Hamdi", "start_cell": "C24"},
-    {"sport": "Throws", "training_group": "Performance Throws", "start_cell": "C26"},
-
-    {"sport": "Squash", "training_group": "Squash", "start_cell": "C37"},
-    {"sport": "Table Tennis", "training_group": "Table Tennis", "start_cell": "C39"},
-    {"sport": "Fencing", "training_group": "Fencing", "start_cell": "C41"},
-    {"sport": "Swimming", "training_group": "Swimming", "start_cell": "C43"},
-    {"sport": "Padel", "training_group": "Padel", "start_cell": "C45"},
-
-    # preacedemy padel is using concatenated function below C47
-    {"sport": "Pre Academy", "training_group": "Pre Academy Fencing", "start_cell": "C49"},
-    {"sport": "Pre Academy", "training_group": "Pre Academy Squash Girls", "start_cell": "C51"},
-    {"sport": "Pre Academy", "training_group": "Pre Academy Athletics", "start_cell": "C53"},
-
-    # athletics girls  is using concatenated function below C55
-    {"sport": "Sprints", "training_group": "Sprints_Short", "start_cell": "C64"},
-    {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C66"},
-]
+        
+        # first page
+        
+        {"sport": "Development", "training_group": "Development 1", "start_cell": "C6"},
+        {"sport": "Development", "training_group": "Development 2", "start_cell": "C8"},
+        {"sport": "Development", "training_group": "Development 3", "start_cell": "C10"},
+        {"sport": "Endurance", "training_group": "Endurance_Senior", "start_cell": "C12"},
+        {"sport": "Jumps", "training_group": "Jumps_PV", "start_cell": "C14"},
+        {"sport": "Jumps", "training_group": "Jumps_Martin Bercel", "start_cell": "C16"},
+        {"sport": "Jumps", "training_group": "Jumps_Ross Jeffs", "start_cell": "C18"},
+        {"sport": "Jumps", "training_group": "Jumps_ElWalid", "start_cell": "C20"},
+        {"sport": "Sprints", "training_group": "Sprints_Lee", "start_cell": "C22"},
+        {"sport": "Sprints", "training_group": "Sprints_Hamdi", "start_cell": "C24"},
+        {"sport": "Throws", "training_group": "Performance Throws", "start_cell": "C26"},
+        
+        # second page
+        
+        {"sport": "Squash", "training_group": "Squash", "start_cell": "C37"},
+        {"sport": "Table Tennis", "training_group": "Table Tennis", "start_cell": "C39"},
+        {"sport": "Fencing", "training_group": "Fencing", "start_cell": "C41"},
+        {"sport": "Swimming", "training_group": "Swimming", "start_cell": "C43"},
+        {"sport": "Padel", "training_group": "Padel", "start_cell": "C45"},
+        
+        {"sport": "Pre Academy Padel", "training_group": "Explorers", "start_cell": "C48"},
+        {"sport": "Pre Academy Padel", "training_group": "Explorers+", "start_cell": "C49"},
+        {"sport": "Pre Academy Padel", "training_group": "Starters", "start_cell": "C50"},
+        {"sport": "Pre Academy", "training_group": "Pre Academy Fencing", "start_cell": "C51"},
+        {"sport": "Pre Academy", "training_group": "Pre Academy Squash Girls", "start_cell": "C53"},
+        {"sport": "Pre Academy", "training_group": "Pre Academy Athletics", "start_cell": "C55"},
+        {"sport": "Girls Programe", "training_group": "Kids", "start_cell": "C58"},
+        {"sport": "Girls Programe", "training_group": "Mini Cadet_U14", "start_cell": "C59"},
+        {"sport": "Girls Programe", "training_group": "Cadet_U16", "start_cell": "C60"},
+        {"sport": "Girls Programe", "training_group": "Youth_U18", "start_cell": "C61"},
+        
+        # third page
+        
+        {"sport": "Sprints", "training_group": "Sprints_Short", "start_cell": "C69"},
+        {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C71"},
+    ]
 
 # Paste row-by-row data
 for row in rows_to_paste:
