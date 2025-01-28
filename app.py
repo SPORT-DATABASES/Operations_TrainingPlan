@@ -213,13 +213,20 @@ def generate_excel(selected_date):
     #paste_concatenated_data(pivot_df, workbook, sport="Girls Programe", start_cell="C55")
 
     # Add dates to the template
-    date_cells = ['C4', 'E4', 'G4', 'I4', 'K4', 'M4', 'O4',
-                  'C35', 'E35', 'G35', 'I35', 'K35', 'M35', 'O35',
-                  'C67', 'E67', 'G67', 'I67', 'K67', 'M67', 'O67']
-    for idx, cell in enumerate(date_cells):
-        day_offset = idx
-        template_sheet[cell].value = (start_date + timedelta(days=day_offset)).strftime('%a %d %b %Y')
-        template_sheet[cell].alignment = Alignment(horizontal="center", vertical="center")
+    # Add dates to the template
+    date_cells_groups = [
+    ['C4', 'E4', 'G4', 'I4', 'K4', 'M4', 'O4'],  # Row 4
+    ['C35', 'E35', 'G35', 'I35', 'K35', 'M35', 'O35'],  # Row 35
+    ['C67', 'E67', 'G67', 'I67', 'K67', 'M67', 'O67'],  # Row 67
+]
+
+# Iterate through the date cells in groups
+    for day_offset, cell_group in enumerate(zip(*date_cells_groups)):  # Transpose groups
+        date_value = (start_date + timedelta(days=day_offset)).strftime('%a %d %b %Y')  # Calculate the date
+        for cell in cell_group:  # Assign the same date to the group
+            template_sheet[cell].value = date_value
+            template_sheet[cell].alignment = Alignment(horizontal="center", vertical="center")
+
 
     # Add "Week Beginning" text to specific cells
     week_number = start_date.isocalendar()[1]  # Get the ISO week number
