@@ -193,6 +193,20 @@ for idx, cell in enumerate(date_cells):
     template_sheet[cell].value = (next_sunday + timedelta(days=day_offset)).strftime('%a %d %b %Y')
     template_sheet[cell].alignment = Alignment(horizontal="center", vertical="center")
 
+# Add "Week Beginning" text to specific cells
+week_number = next_sunday.isocalendar()[1]  # Get the ISO week number
+week_beginning_text = f"Week beginning {start_date.strftime('%d %b')}\nWeek {week_number}"
+
+
+# Populate cells O2, O33, and O65 with the week information
+template_sheet["O2"].value = week_beginning_text
+template_sheet["O33"].value = week_beginning_text
+template_sheet["O65"].value = week_beginning_text
+
+# Center align the text in these cells
+for cell in ["O2", "O33", "O65"]:
+    template_sheet[cell].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
 # 4) Paste data - Collect missing data messages in a list
 no_data_found_messages = []
 
