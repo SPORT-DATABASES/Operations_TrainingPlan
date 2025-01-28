@@ -43,9 +43,19 @@ def format_session(group):
         time = f"{start_time}-{finish_time}" if start_time or finish_time else ''
 
         if venue or time:  # Include only non-empty venue or time
-            venue_time_pairs.append(f"{venue} {time}".strip())
+            venue_time_pairs.append((start_time, f"{venue} {time}".strip()))
 
-    return ' + '.join(filter(None, venue_time_pairs))
+    # Sort the venue-time pairs by the start time
+    sorted_venue_time_pairs = sorted(
+        venue_time_pairs, 
+        key=lambda x: datetime.strptime(x[0], '%H:%M') if x[0] else datetime.min
+    )
+
+    # Extract only the formatted strings
+    sorted_sessions = [pair[1] for pair in sorted_venue_time_pairs]
+
+    return ' + '.join(filter(None, sorted_sessions))
+
 
 ###############################################################################
 # Function to ensure all expected columns are present in the pivot DataFrame
@@ -128,6 +138,7 @@ df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
 
 # Exclude this venue
 df = df[df['Venue'] != 'AASMC']
+df = df[df['Sport'] != 'Generic Athlete']
 
 # Define date range for the next week
 today = datetime.now()
@@ -174,7 +185,9 @@ workbook = load_workbook(output_path)
 template_sheet = workbook["Template"]
 
 # Fill in date cells
-date_cells = ['C4', 'E4', 'G4', 'I4', 'K4', 'M4', 'O4']
+date_cells = ['C4', 'E4', 'G4', 'I4', 'K4', 'M4', 'O4',
+                  'C35', 'E35', 'G35', 'I35', 'K35', 'M35', 'O35',
+                  'C67', 'E67', 'G67', 'I67', 'K67', 'M67', 'O67']
 for idx, cell in enumerate(date_cells):
     day_offset = idx
     template_sheet[cell].value = (next_sunday + timedelta(days=day_offset)).strftime('%a %d %b %Y')
@@ -235,22 +248,22 @@ for row in rows_to_paste:
         no_data_found_list=no_data_found_messages
     )
 
-# Paste concatenated data
-paste_concatenated_data(
-    pivot_df=pivot_df,
-    workbook=workbook,
-    sport="Pre Academy Padel",
-    start_cell="C47",
-    no_data_found_list=no_data_found_messages
-)
+# # Paste concatenated data
+# paste_concatenated_data(
+#     pivot_df=pivot_df,
+#     workbook=workbook,
+#     sport="Pre Academy Padel",
+#     start_cell="C47",
+#     no_data_found_list=no_data_found_messages
+# )
 
-paste_concatenated_data(
-    pivot_df=pivot_df,
-    workbook=workbook,
-    sport="Girls Programe",
-    start_cell="C55",
-    no_data_found_list=no_data_found_messages
-)
+# paste_concatenated_data(
+#     pivot_df=pivot_df,
+#     workbook=workbook,
+#     sport="Girls Programe",
+#     start_cell="C55",
+#     no_data_found_list=no_data_found_messages
+# )
 
 # 5) Save the Excel workbook
 workbook.save(output_path)

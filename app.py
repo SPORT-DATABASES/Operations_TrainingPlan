@@ -49,9 +49,19 @@ def format_session(group):
         time = f"{start_time}-{finish_time}" if start_time or finish_time else ''
 
         if venue or time:  # Include only non-empty venue or time
-            venue_time_pairs.append(f"{venue} {time}".strip())
+            venue_time_pairs.append((start_time, f"{venue} {time}".strip()))
 
-    return ' + '.join(filter(None, venue_time_pairs))
+    # Sort the venue-time pairs by the start time
+    sorted_venue_time_pairs = sorted(
+        venue_time_pairs, 
+        key=lambda x: datetime.strptime(x[0], '%H:%M') if x[0] else datetime.min
+    )
+
+    # Extract only the formatted strings
+    sorted_sessions = [pair[1] for pair in sorted_venue_time_pairs]
+
+    return ' + '.join(filter(None, sorted_sessions))
+
 
 # Function to paste filtered data into the Template sheet
 def paste_filtered_data_to_template(pivot_df, workbook, sport, training_group, start_cell):
@@ -115,6 +125,7 @@ def generate_excel(selected_date):
     df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
 
     df = df[df['Venue'] != 'AASMC']
+    df = df[df['Sport'] != 'Generic Athlete']
 
     # Filter and clean data
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce', dayfirst=True).dt.date
@@ -201,7 +212,9 @@ def generate_excel(selected_date):
     #paste_concatenated_data(pivot_df, workbook, sport="Girls Programe", start_cell="C55")
 
     # Add dates to the template
-    date_cells = ['C4', 'E4', 'G4', 'I4', 'K4', 'M4', 'O4']
+    date_cells = ['C4', 'E4', 'G4', 'I4', 'K4', 'M4', 'O4',
+                  'C35', 'E35', 'G35', 'I35', 'K35', 'M35', 'O35',
+                  'C67', 'E67', 'G67', 'I67', 'K67', 'M67', 'O67']
     for idx, cell in enumerate(date_cells):
         day_offset = idx
         template_sheet[cell].value = (start_date + timedelta(days=day_offset)).strftime('%a %d %b %Y')
