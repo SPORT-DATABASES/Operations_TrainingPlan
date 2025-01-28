@@ -196,7 +196,7 @@ for idx, cell in enumerate(date_cells):
 
 # Add "Week Beginning" text to specific cells
 week_number = next_sunday.isocalendar()[1]  # Get the ISO week number
-week_beginning_text = f"Week beginning {start_date.strftime('%d %b')}\nWeek {week_number}"
+week_beginning_text = f"Week beginning {next_sunday.strftime('%d %b')}\nWeek {week_number}"
 
 
 # Populate cells O2, O33, and O65 with the week information
