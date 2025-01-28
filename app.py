@@ -49,18 +49,20 @@ def format_session(group):
         time = f"{start_time}-{finish_time}" if start_time or finish_time else ''
 
         if venue or time:  # Include only non-empty venue or time
-            venue_time_pairs.append((start_time, f"{venue} {time}".strip()))
+            venue_time_pairs.append((start_time, f"{venue}\n{time}".strip()))
 
     # Sort the venue-time pairs by the start time
     sorted_venue_time_pairs = sorted(
-        venue_time_pairs, 
+        venue_time_pairs,
         key=lambda x: datetime.strptime(x[0], '%H:%M') if x[0] else datetime.min
     )
 
     # Extract only the formatted strings
     sorted_sessions = [pair[1] for pair in sorted_venue_time_pairs]
 
-    return ' + '.join(filter(None, sorted_sessions))
+    # Join each venue/time pair with a single newline
+    return '\n'.join(filter(None, sorted_sessions))
+
 
 
 # Function to paste filtered data into the Template sheet
