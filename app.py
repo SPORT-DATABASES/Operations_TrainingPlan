@@ -43,13 +43,20 @@ def ensure_all_columns(pivot_df, day_order):
 def format_session(group):
     venue_time_pairs = []
     for _, row in group.iterrows():
+        type_value = str(row['Session_Type']) if pd.notnull(row['Session_Type']) else ''  # Ensure Type is a string
         venue = str(row['Venue']) if pd.notnull(row['Venue']) else ''  # Ensure Venue is a string
         start_time = str(row['Start_Time']) if pd.notnull(row['Start_Time']) else ''
         finish_time = str(row['Finish_Time']) if pd.notnull(row['Finish_Time']) else ''
         time = f"{start_time}-{finish_time}" if start_time or finish_time else ''
 
-        if venue or time:  # Include only non-empty venue or time
-            venue_time_pairs.append((start_time, f"{venue}\n{time}".strip()))
+        # Include "Competition" if Type is "Competition"
+        if type_value == "Competition":
+            formatted_entry = f"Competition\n{venue}\n{time}".strip()
+        else:
+            formatted_entry = f"{venue}\n{time}".strip()
+
+        if venue or time or type_value:  # Include only non-empty entries
+            venue_time_pairs.append((start_time, formatted_entry))
 
     # Sort the venue-time pairs by the start time
     sorted_venue_time_pairs = sorted(
@@ -60,8 +67,9 @@ def format_session(group):
     # Extract only the formatted strings
     sorted_sessions = [pair[1] for pair in sorted_venue_time_pairs]
 
-    # Join each venue/time pair with a single newline
+    # Join each entry with a single newline
     return '\n'.join(filter(None, sorted_sessions))
+
 
 
 
@@ -115,7 +123,7 @@ def generate_excel(selected_date):
     # Fetch data
     session = requests.Session()
     session.auth = ("kenneth.mcmillan", "Quango76")
-    response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON3_TRAINING_PLAN&updategroup=true")
+    response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON5_TRAINING_PLAN&updategroup=true")
     response.raise_for_status()
     data = pd.read_html(StringIO(response.text))[0]
     df = data.drop(columns=['About'], errors='ignore').drop_duplicates()
@@ -137,13 +145,15 @@ def generate_excel(selected_date):
     filtered_df = filtered_df.dropna(subset=['Sport']).sort_values(by=['Date', 'Sport', 'Coach', 'AM/PM'])
 
     # Group and pivot data
+    # Group and pivot data
     grouped = (
-        filtered_df.groupby(['Sport', 'Training_Group', 'Day_AM/PM'])
+        filtered_df.groupby(['Sport', 'Training_Group', 'Day_AM/PM', 'Session_Type'])  # Include Type in the grouping
         .apply(format_session)
         .reset_index()
     )
-    grouped.columns = ['Sport', 'Training_Group', 'Day_AM/PM', 'Session']
+    grouped.columns = ['Sport', 'Training_Group', 'Day_AM/PM', 'Session_Type', 'Session']  # Update column names
 
+    # Create pivot table
     pivot_df = pd.pivot_table(
         grouped,
         values='Session',
@@ -152,6 +162,7 @@ def generate_excel(selected_date):
         aggfunc='first',
         fill_value=' '
     ).reset_index()
+
 
     # Ensure all day/time columns are present
     day_order = [
