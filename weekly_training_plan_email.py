@@ -139,6 +139,7 @@ df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
 # Exclude this venue
 df = df[df['Venue'] != 'AASMC']
 df = df[df['Sport'] != 'Generic Athlete']
+df = df[df['Training_Group'] != 'Practice']
 
 # Define date range for the next week
 today = datetime.now()

@@ -126,6 +126,7 @@ def generate_excel(selected_date):
 
     df = df[df['Venue'] != 'AASMC']
     df = df[df['Sport'] != 'Generic Athlete']
+    df = df[df['Training_Group'] != 'Practice']
 
     # Filter and clean data
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce', dayfirst=True).dt.date
