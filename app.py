@@ -40,6 +40,8 @@ def ensure_all_columns(pivot_df, day_order):
     return pivot_df.reindex(columns=['Sport', 'Training_Group'] + day_order, fill_value=' ')
 
 # Function to format session information for grouping
+###############################################################################
+# Function to format session information for a group
 def format_session(group):
     venue_time_pairs = []
     for _, row in group.iterrows():
@@ -48,6 +50,10 @@ def format_session(group):
         start_time = str(row['Start_Time']) if pd.notnull(row['Start_Time']) else ''
         finish_time = str(row['Finish_Time']) if pd.notnull(row['Finish_Time']) else ''
         time = f"{start_time}-{finish_time}" if start_time or finish_time else ''
+
+        # If the session type is "Training Camp", return only "TRAINING CAMP"
+        if type_value == "Training Camp":
+            return "TRAINING CAMP"
 
         # Include "Competition" if Type is "Competition"
         if type_value == "Competition":
@@ -69,8 +75,6 @@ def format_session(group):
 
     # Join each entry with a single newline
     return '\n'.join(filter(None, sorted_sessions))
-
-
 
 
 # Function to paste filtered data into the Template sheet
