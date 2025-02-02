@@ -334,15 +334,16 @@ if st.session_state.generated:
     st.markdown("### Pivot DataFrame for checking data")
     st.dataframe(st.session_state.pivot_df)
     st.download_button(
-        label="Download Training Calendar Excel Report",
+        label="📅 Download Training Calendar Excel Report",
         data=st.session_state.excel_file,
         file_name=f"Training_Report_{selected_date.strftime('%d%b%Y')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
+)
+
     st.write("Filtered Data Preview for Venue Report:")
 
     st.download_button(
-        label="Download Venue Usage Report",
+        label="📄 Download Venue Usage Report",
         data=st.session_state.venue_file,
         file_name=f"Venue_Usage_Report_{selected_date.strftime('%d%b%Y')}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
