@@ -314,7 +314,7 @@ if "filtered_data" not in st.session_state:
     st.session_state.filtered_data = None
 
 st.title("Operations - Weekly Training Plan App")
-st.markdown("Generate an Training Calendar and Venue Usage reports for any week from 1st January 2025.")
+st.markdown("Generate Training Calendar and Venue Usage reports for any week from 1st January 2025.")
 
 selected_date = st.date_input("Select a starting date (make sure to choose a SUNDAY!)", value=datetime.now().date())
 
