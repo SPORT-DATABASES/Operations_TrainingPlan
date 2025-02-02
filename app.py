@@ -314,9 +314,9 @@ if "filtered_data" not in st.session_state:
     st.session_state.filtered_data = None
 
 st.title("Operations - Weekly Training Plan App")
-st.markdown("Generate an Excel report for any week (past or future).")
+st.markdown("Generate an Training Calendar and Venue Usage reports for any week from 1st January 2025.")
 
-selected_date = st.date_input("Select a starting Sunday (make sure to choose a Sunday)", value=datetime.now().date())
+selected_date = st.date_input("Select a starting date (make sure to choose a SUNDAY!)", value=datetime.now().date())
 
 if st.button("Generate Reports"):
     try:
