@@ -1,0 +1,209 @@
+# Now let's create the schedule with the actual data
+import pandas as pd
+from datetime import datetime, timedelta
+from IPython.display import HTML
+
+# Create a mapping of Training_Group to Coach
+group_coach_map = df.groupby('Training_Group')['Coach'].first()
+
+def format_session(group):
+    venues = []
+    times = set()
+    for _, row in group.iterrows():
+        venues.append(row['Venue'])
+        times.add(f"{row['Start_Time']}-{row['Finish_Time']}")
+    venue_str = ' + '.join(venues)
+    time_str = list(times)[0]
+    return f"{venue_str}\
+{time_str}"
+
+# Group and pivot data
+grouped = df.groupby(['Sport', 'Training_Group', 'Day_AM/PM']).apply(format_session)
+grouped = grouped.reset_index()
+grouped.columns = ['Sport', 'Training_Group', 'Day_AM/PM', 'Session']
+
+pivot_df = pd.pivot_table(
+    grouped,
+    values='Session',
+    index=['Sport', 'Training_Group'],
+    columns=['Day_AM/PM'],
+    aggfunc='first',
+    fill_value=' '
+)
+
+# Get current week dates
+today = datetime.strptime('2025-01-26', '%Y-%m-%d')  # Using the date from your data
+start_of_week = today
+day_names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Saturday']
+dates = [(start_of_week + timedelta(days=i if i < 5 else i+1)).strftime('%Y-%m-%d') for i in range(6)]
+
+# Create HTML with embedded CSS
+html = """
+<style>
+    table { 
+        border-collapse: collapse; 
+        width: 100%;
+        table-layout: fixed;
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+        margin: 20px 0;
+    }
+    th, td { 
+        border: 1px solid black; 
+        padding: 0; 
+        text-align: center;
+        overflow: hidden;
+    }
+    th.date { 
+        background-color: #f2f2f2;
+        font-size: 13px;
+        width: 15%;
+        padding: 10px;
+    }
+    th.sport-header {
+        background-color: #f2f2f2;
+        width: 7%;
+        padding: 10px;
+    }
+    th.group-header {
+        background-color: #f2f2f2;
+        width: 10%;
+        padding: 10px;
+    }
+    th.ampm { 
+        background-color: #e6e6e6;
+        font-size: 12px;
+        width: 7.5%;
+        padding: 10px;
+    }
+    td { 
+        white-space: pre-line; 
+        vertical-align: top; 
+        text-align: left;
+        line-height: 1.3;
+        height: 50px;
+    }
+    .venue {
+        color: #444;
+        font-weight: bold;
+        font-size: 11px;
+        padding: 8px;
+        display: block;
+        border-bottom: 1px solid #ccc;
+        background-color: #f8f8f8;
+    }
+    .time {
+        color: #666;
+        font-size: 11px;
+        padding: 8px;
+        display: block;
+    }
+    .sport-cell {
+        background-color: #f2f2f2;
+        font-weight: bold;
+        font-size: 11px;
+        padding: 10px;
+    }
+    .group-cell {
+        background-color: #f8f8f8;
+        padding: 10px;
+    }
+    .coach-name {
+        color: #666;
+        font-style: italic;
+        font-size: 11px;
+        margin-top: 4px;
+        display: block;
+    }
+    tr:nth-child(even) td {
+        background-color: #f9f9f9;
+    }
+    .session-cell {
+        padding: 0;
+        margin: 0;
+    }
+</style>
+<table>
+    <thead>
+    <tr>
+        <th class="sport-header" rowspan="2">Sport</th>
+        <th class="group-header" rowspan="2">Group<br>&<br>Coach</th>
+"""
+
+# Add date headers spanning AM/PM
+for date, day in zip(dates, day_names):
+    html += f"""
+        <th class="date" colspan="2">{day}<br>{date}</th>
+    """
+
+html += """
+    </tr>
+    <tr>
+"""
+
+# Add AM/PM headers
+for _ in range(6):
+    html += """
+        <th class="ampm">AM</th>
+        <th class="ampm">PM</th>
+    """
+
+html += """
+    </tr>
+    </thead>
+    <tbody>
+"""
+
+# Add data rows
+current_sport = None
+for (sport, group) in pivot_df.index:
+    html += "<tr>"
+    
+    # Add sport column (only if it changed)
+    if sport != current_sport:
+        sport_rowspan = len(pivot_df.loc[sport])
+        html += f'<td class="sport-cell" rowspan="{sport_rowspan}">{sport}</td>'
+        current_sport = sport
+    
+    # Add group column with coach name
+    coach = group_coach_map.get(group, "")
+    html += f'<td class="group-cell">{group}<span class="coach-name">{coach}</span></td>'
+    
+    # Add data cells
+    for day in day_names:
+        am_key = f"{day} AM"
+        pm_key = f"{day} PM"
+        am_val = pivot_df.get(am_key, {}).get((sport, group), " ")
+        pm_val = pivot_df.get(pm_key, {}).get((sport, group), " ")
+        
+        def format_cell(content):
+            if content.strip() == " ":
+                return " "
+            parts = content.split('\
+')
+            if len(parts) >= 2:
+                return f"""<div class="session-cell"><span class="venue">{parts[0]}</span><span class="time">{parts[1]}</span></div>"""
+            return content
+            
+        html += f'<td class="session-cell">{format_cell(am_val)}</td><td class="session-cell">{format_cell(pm_val)}</td>'
+    html += "</tr>"
+
+html += """
+    </tbody>
+</table>
+"""
+
+# Save HTML file
+with open('schedule_divided_cells.html', 'w') as f:
+    f.write(html)
+
+# Display the HTML
+display(HTML(html))
+
+print("Created schedule with actual data:")
+print("- Used your Excel data")
+print("- Maintained all formatting")
+print("- Proper dates starting from January 26, 2025")
+print("- All sports and training groups from your data")
+print("\
+Saved as 'schedule_divided_cells.html'")

@@ -1,0 +1,95 @@
+from fpdf import FPDF
+import pandas as pd
+
+# Read and prepare the data
+df = pd.read_excel('Excel_template.xlsx', sheet_name='Data')
+df['Date'] = pd.to_datetime(df['Date'])
+df['Time'] = df['Start_Time'] + '-' + df['Finish_Time']
+
+# Create session order for sorting
+session_order = {'AM': 0, 'PM': 1}
+df['session_order'] = df['AM/PM'].map(session_order)
+
+# Sort the data
+df = df.sort_values(['Venue', 'Date', 'session_order'])
+
+# Initialize PDF
+class PDF(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 15)
+        self.cell(0, 10, 'Venue Booking Report', 0, 1, 'C')
+        self.ln(5)
+        
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+
+pdf = PDF()
+pdf.set_auto_page_break(auto=True, margin=15)
+
+# Column widths
+col_widths = {
+    'Date': 35,
+    'Session': 20,
+    'Sport': 30,
+    'Training_Group': 40,
+    'Coach': 40,
+    'Time': 25
+}
+
+# Create the report
+for venue in sorted(df['Venue'].unique()):
+    venue_data = df[df['Venue'] == venue]
+    
+    pdf.add_page()
+    
+    # Venue header
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(0, 10, venue, 0, 1, 'L')
+    pdf.ln(2)
+    
+    # Table header
+    pdf.set_font('Arial', 'B', 9)
+    pdf.set_fill_color(240, 240, 240)
+    
+    pdf.cell(col_widths['Date'], 7, 'Date', 1, 0, 'L', 1)
+    pdf.cell(col_widths['Session'], 7, 'Session', 1, 0, 'L', 1)
+    pdf.cell(col_widths['Sport'], 7, 'Sport', 1, 0, 'L', 1)
+    pdf.cell(col_widths['Training_Group'], 7, 'Training Group', 1, 0, 'L', 1)
+    pdf.cell(col_widths['Coach'], 7, 'Coach', 1, 0, 'L', 1)
+    pdf.cell(col_widths['Time'], 7, 'Time', 1, 1, 'L', 1)
+    
+    # Table content
+    pdf.set_font('Arial', '', 9)
+    for _, row in venue_data.iterrows():
+        # Check if we need to add a page break
+        if pdf.get_y() + 7 > pdf.page_break_trigger:
+            pdf.add_page()
+            # Repeat the header
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(col_widths['Date'], 7, 'Date', 1, 0, 'L', 1)
+            pdf.cell(col_widths['Session'], 7, 'Session', 1, 0, 'L', 1)
+            pdf.cell(col_widths['Sport'], 7, 'Sport', 1, 0, 'L', 1)
+            pdf.cell(col_widths['Training_Group'], 7, 'Training Group', 1, 0, 'L', 1)
+            pdf.cell(col_widths['Coach'], 7, 'Coach', 1, 0, 'L', 1)
+            pdf.cell(col_widths['Time'], 7, 'Time', 1, 1, 'L', 1)
+            pdf.set_font('Arial', '', 9)
+        
+        pdf.cell(col_widths['Date'], 7, row['Date_long'], 1, 0, 'L')
+        pdf.cell(col_widths['Session'], 7, row['AM/PM'], 1, 0, 'L')
+        pdf.cell(col_widths['Sport'], 7, row['Sport'], 1, 0, 'L')
+        pdf.cell(col_widths['Training_Group'], 7, str(row['Training_Group']), 1, 0, 'L')
+        pdf.cell(col_widths['Coach'], 7, row['Coach'], 1, 0, 'L')
+        pdf.cell(col_widths['Time'], 7, row['Time'], 1, 1, 'L')
+
+# Save the PDF
+pdf.output('venue_booking_report.pdf')
+
+print("Created PDF version of venue booking report:")
+print("- One section per venue")
+print("- All booking details in separate columns")
+print("- Proper date and session sorting")
+print("- Clean, easy-to-read layout")
+print("\
+Saved as 'venue_booking_report.pdf'")
