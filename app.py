@@ -340,8 +340,6 @@ if st.session_state.generated:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 )
 
-    st.write("Filtered Data Preview for Venue Report:")
-
     st.download_button(
         label="📄 Download Venue Usage Report",
         data=st.session_state.venue_file,
