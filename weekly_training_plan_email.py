@@ -137,8 +137,8 @@ def paste_concatenated_data(pivot_df, workbook, sport, start_cell, no_data_found
 
 # Fetch and parse the report
 session = requests.Session()
-session.auth = ("kenneth.mcmillan", "Quango76")  # Adjust if needed
-response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON5_TRAINING_PLAN&updategroup=true")
+session.auth = ("sb_sap.etl", "A1s2p3!re")  # Adjust if needed
+response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON6_TRAINING_PLAN&updategroup=true")
 response.raise_for_status()
 
 data = pd.read_html(StringIO(response.text))[0]
@@ -330,8 +330,10 @@ for m in no_data_found_messages:
 
 # 7) Send the email with the attached Excel
 sender_email = "kennymcmillan29@gmail.com"
-receiver_emails = ["kenneth.mcmillan@aspire.qa", "kennymcmillan29@gmail.com",
-                    "alessandra.moretti@aspire.qa"]
+receiver_emails = ["kenneth.mcmillan@aspire.qa",
+                   "kennymcmillan29@gmail.com"
+                    "alessandra.moretti@aspire.qa"
+]
 
 subject = "Weekly Training Plan - Automated Thursday Update"
 

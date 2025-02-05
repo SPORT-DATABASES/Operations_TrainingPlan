@@ -125,8 +125,8 @@ def generate_excel(selected_date):
     st.write(f"**Selected Date Range:** {start_date.strftime('%a %d %b %Y')} to {end_date.strftime('%a %d %b %Y')}")
     
     session = requests.Session()
-    session.auth = ("kenneth.mcmillan", "Quango76")
-    response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON5_TRAINING_PLAN&updategroup=true")
+    session.auth = ("sb_sap.etl", "A1s2p3!re")  # Adjust if needed
+    response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON6_TRAINING_PLAN&updategroup=true")
     response.raise_for_status()
     data = pd.read_html(StringIO(response.text))[0]
     df = data.drop(columns=['About'], errors='ignore').drop_duplicates()
