@@ -172,7 +172,7 @@ def generate_excel(selected_date):
         {"sport": "Jumps", "training_group": "Jumps_ElWalid", "start_cell": "C20"},
         {"sport": "Sprints", "training_group": "Sprints_Lee", "start_cell": "C22"},
         {"sport": "Sprints", "training_group": "Sprints_Hamdi", "start_cell": "C24"},
-        {"sport": "Throws", "training_group": " Senior Performance Throws", "start_cell": "C26"},
+        {"sport": "Throws", "training_group": "Senior Performance Throws", "start_cell": "C26"},
         {"sport": "Squash", "training_group": "Squash", "start_cell": "C37"},
         {"sport": "Table Tennis", "training_group": "Table Tennis", "start_cell": "C39"},
         {"sport": "Fencing", "training_group": "Fencing", "start_cell": "C41"},
