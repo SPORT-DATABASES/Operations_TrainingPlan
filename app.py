@@ -133,7 +133,7 @@ def generate_excel(selected_date):
     df.columns = df.columns.str.replace(' ', '_')
     df['Start_Time'] = pd.to_numeric(df['Start_Time'], errors='coerce').apply(lambda x: convert_to_time(x))
     df['Finish_Time'] = pd.to_numeric(df['Finish_Time'], errors='coerce').apply(lambda x: convert_to_time(x))
-    df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
+   # df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
     df = df[df['Venue'] != 'AASMC']
     df = df[df['Sport'] != 'Generic Athlete']
     df = df[df['Training_Group'] != 'Practice']
@@ -190,6 +190,7 @@ def generate_excel(selected_date):
         {"sport": "Girls Programe", "training_group": "Youth_U18", "start_cell": "C61"},
         {"sport": "Sprints", "training_group": "Sprints_Short", "start_cell": "C69"},
         {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C71"},
+        {"sport": "Jumps", "training_group": "Jumps_QAF", "start_cell": "C71"}
     ]
     for row in rows_to_paste:
         paste_filtered_data_to_template(
