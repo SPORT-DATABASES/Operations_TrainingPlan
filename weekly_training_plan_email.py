@@ -252,7 +252,7 @@ rows_to_paste = [
         {"sport": "Jumps", "training_group": "Jumps_ElWalid", "start_cell": "C20"},
         {"sport": "Sprints", "training_group": "Sprints_Lee", "start_cell": "C22"},
         {"sport": "Sprints", "training_group": "Sprints_Hamdi", "start_cell": "C24"},
-        {"sport": "Throws", "training_group": "Performance Throws", "start_cell": "C26"},
+        {"sport": "Throws", "training_group": "Senior Performance Throws", "start_cell": "C26"},
         
         # second page
         
