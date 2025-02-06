@@ -133,7 +133,7 @@ def generate_excel(selected_date):
     df.columns = df.columns.str.replace(' ', '_')
     df['Start_Time'] = pd.to_numeric(df['Start_Time'], errors='coerce').apply(lambda x: convert_to_time(x))
     df['Finish_Time'] = pd.to_numeric(df['Finish_Time'], errors='coerce').apply(lambda x: convert_to_time(x))
-   # df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
+    df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
     df = df[df['Venue'] != 'AASMC']
     df = df[df['Sport'] != 'Generic Athlete']
     df = df[df['Training_Group'] != 'Practice']
