@@ -190,7 +190,7 @@ def generate_excel(selected_date):
         {"sport": "Girls Programe", "training_group": "Youth_U18", "start_cell": "C61"},
         {"sport": "Sprints", "training_group": "Sprints_Short", "start_cell": "C69"},
         {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C71"},
-        {"sport": "Jumps", "training_group": "Jumps_QAF", "start_cell": "C71"}
+        {"sport": "Jumps", "training_group": "Jumps_QAF", "start_cell": "C73"}
     ]
     for row in rows_to_paste:
         paste_filtered_data_to_template(

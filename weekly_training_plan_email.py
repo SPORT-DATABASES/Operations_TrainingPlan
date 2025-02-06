@@ -277,6 +277,7 @@ rows_to_paste = [
         
         {"sport": "Sprints", "training_group": "Sprints_Short", "start_cell": "C69"},
         {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C71"},
+        {"sport": "Jumps", "training_group": "Jumps_QAF", "start_cell": "C73"}
     ]
 
 # Paste row-by-row data
