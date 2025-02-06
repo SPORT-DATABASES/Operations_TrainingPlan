@@ -23,7 +23,6 @@ st.set_page_config(
 # ---- Custom CSS to hide default Streamlit elements and reduce top spacing ----
 hide_streamlit_style = """
 <style>
-/* Hide the default hamburger menu and footer */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 </style>
@@ -33,11 +32,6 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 # ----------------------------------------
 # Helper function to set cell background color in Word tables
 def set_cell_background(cell, color):
-    """
-    Set the background shading color for a cell.
-    :param cell: a docx.table._Cell object
-    :param color: Hex color string (e.g., "ADD8E6" for light blue)
-    """
     tc = cell._tc
     tcPr = tc.get_or_add_tcPr()
     shd = OxmlElement('w:shd')
@@ -62,24 +56,37 @@ def ensure_all_columns(pivot_df, day_order):
     return pivot_df.reindex(columns=['Sport', 'Training_Group'] + day_order, fill_value=' ')
 
 # ----------------------------------------
-# Function to format session information for grouping in the Excel calendar
-# (Session_Type is ignored so that all sessions in a time slot are merged)
+# Updated function to format session information for grouping in the Excel calendar.
 def format_session(group):
-    venue_time_pairs = []
+    tc_sessions = []    # For training camp rows
+    other_sessions = [] # For other sessions
     for _, row in group.iterrows():
-        venue = str(row['Venue']) if pd.notnull(row['Venue']) else ''
-        start_time = str(row['Start_Time']) if pd.notnull(row['Start_Time']) else ''
-        finish_time = str(row['Finish_Time']) if pd.notnull(row['Finish_Time']) else ''
-        time = f"{start_time}-{finish_time}" if start_time or finish_time else ''
-        if venue or time:
-            venue_time_pairs.append((start_time, f"{venue}\n{time}".strip()))
-    # Sort the venue-time pairs by start time
-    sorted_venue_time_pairs = sorted(
-        venue_time_pairs,
-        key=lambda x: datetime.strptime(x[0], '%H:%M') if x[0] else datetime.min
-    )
-    sorted_sessions = [pair[1] for pair in sorted_venue_time_pairs]
-    return '\n'.join(filter(None, sorted_sessions))
+        session_type = str(row.get('Session_Type', '')).strip().lower()
+        if session_type == "training camp":
+            st_time = str(row['Start_Time']) if pd.notnull(row['Start_Time']) and str(row['Start_Time']).strip() != "" else "23:59"
+            tc_sessions.append((st_time, "TRAINING CAMP"))
+        else:
+            venue = str(row['Venue']) if pd.notnull(row['Venue']) else ''
+            start_time = str(row['Start_Time']) if pd.notnull(row['Start_Time']) else ''
+            finish_time = str(row['Finish_Time']) if pd.notnull(row['Finish_Time']) else ''
+            time_info = f"{start_time}-{finish_time}" if start_time or finish_time else ''
+            detail = f"{venue}\n{time_info}".strip()
+            other_sessions.append((start_time, detail))
+    def sort_key(x):
+        try:
+            return datetime.strptime(x[0], '%H:%M')
+        except Exception:
+            return datetime.max
+    tc_sessions_sorted = sorted(tc_sessions, key=sort_key)
+    other_sessions_sorted = sorted(other_sessions, key=sort_key)
+    if tc_sessions_sorted and other_sessions_sorted:
+        tc_str = " & ".join(s[1] for s in tc_sessions_sorted if s[1])
+        other_str = "\n".join(s[1] for s in other_sessions_sorted if s[1])
+        return f"{tc_str}\n{other_str}"
+    else:
+        combined = tc_sessions_sorted + other_sessions_sorted
+        combined_sorted = sorted(combined, key=sort_key)
+        return "\n".join(s[1] for s in combined_sorted if s[1])
 
 # ----------------------------------------
 # Function to paste filtered data into the Excel template sheet
@@ -99,7 +106,6 @@ def paste_filtered_data_to_template(pivot_df, workbook, sport, training_group, s
 def generate_excel(selected_date):
     template_path = "Excel_template.xlsx"  # Path to your Excel template
     output_filename = f"Training_Report_{selected_date.strftime('%d%b%Y')}.xlsx"
-    # Overwrite any existing file with the same name
     if os.path.exists(output_filename):
         os.remove(output_filename)
     shutil.copy(template_path, output_filename)
@@ -111,39 +117,32 @@ def generate_excel(selected_date):
     st.write(f"**Selected Date Range:** {start_date.strftime('%a %d %b %Y')} to {end_date.strftime('%a %d %b %Y')}")
 
     session_req = requests.Session()
-    session_req.auth = ("sb_sap.etl", "A1s2p3!re")  # Adjust if needed
+    session_req.auth = ("sb_sap.etl", "A1s2p3!re")
     response = session_req.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON6_TRAINING_PLAN&updategroup=true")
     response.raise_for_status()
     data = pd.read_html(StringIO(response.text))[0]
     df = data.drop(columns=['About'], errors='ignore').drop_duplicates()
     df.columns = df.columns.str.replace(' ', '_')
 
-    # Normalize the sport and training group values (as done in previous code)
+    # Normalize sport and training group values
     df['Sport'] = df['Sport'].str.replace(' ', '_')
     df['Training_Group'] = df['Training_Group'].str.replace(' ', '_')
     
     df['Start_Time'] = pd.to_numeric(df['Start_Time'], errors='coerce').apply(lambda x: convert_to_time(x))
     df['Finish_Time'] = pd.to_numeric(df['Finish_Time'], errors='coerce').apply(lambda x: convert_to_time(x))
     
-    # Exclude rows with empty Sport or unwanted values
     df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
     df = df[df['Venue'] != 'AASMC']
     df = df[df['Sport'] != 'Generic_Athlete']
     df = df[df['Training_Group'] != 'Practice']
 
-    # Convert Date column to proper date objects
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce', dayfirst=True).dt.date
     filtered_df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
-    # Ensure AM/PM column is a categorical type for proper sorting if it exists
     if 'AM/PM' in filtered_df.columns:
         filtered_df.loc[:, 'AM/PM'] = pd.Categorical(filtered_df['AM/PM'], categories=['AM', 'PM'], ordered=True)
     filtered_df = filtered_df.dropna(subset=['Sport']).sort_values(by=['Date', 'Sport', 'Coach', 'AM/PM'])
 
-    # -------------------------------
-    # For the Excel calendar, group without Session_Type:
-    calendar_grouped = filtered_df.groupby(
-        ['Sport', 'Training_Group', 'Day_AM/PM']
-    ).apply(format_session).reset_index()
+    calendar_grouped = filtered_df.groupby(['Sport', 'Training_Group', 'Day_AM/PM']).apply(format_session).reset_index()
     calendar_grouped.columns = ['Sport', 'Training_Group', 'Day_AM/PM', 'Session']
 
     pivot_df = pd.pivot_table(
@@ -155,13 +154,36 @@ def generate_excel(selected_date):
         fill_value=' '
     ).reset_index()
 
-    # Ensure the pivot table has all expected day/time columns.
-    day_order = [f"{day} {time}" for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] 
+    day_order = [f"{day} {time}" for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
                                        for time in ['AM', 'PM']]
     pivot_df = ensure_all_columns(pivot_df, day_order)
 
-    # -------------------------------
-    # Paste data into the Excel template
+    # --- Updated Post-processing:
+    # For each day, if one slot (AM or PM) contains "TRAINING CAMP" (case-insensitive),
+    # then ensure both the AM and PM cells for that day include "TRAINING CAMP" as the first line.
+    special_text = "TRAINING CAMP"
+    def prepend_special(text):
+        # Remove any leading occurrences of special_text (case-insensitive) and then prepend it.
+        lines = text.splitlines()
+        # Remove any line that is exactly the special text (case-insensitive).
+        filtered = [line for line in lines if line.strip().upper() != special_text]
+        return f"{special_text}" + ("\n" + "\n".join(filtered) if filtered else "")
+    
+    for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']:
+        am_col = f"{day} AM"
+        pm_col = f"{day} PM"
+        for idx, row in pivot_df.iterrows():
+            am_val = str(row.get(am_col, '')).strip()
+            pm_val = str(row.get(pm_col, '')).strip()
+            am_has = special_text in am_val.upper()
+            pm_has = special_text in pm_val.upper()
+            if am_has or pm_has:
+                # Prepend the special text to both cells.
+                new_am = prepend_special(am_val)
+                new_pm = prepend_special(pm_val)
+                pivot_df.at[idx, am_col] = new_am
+                pivot_df.at[idx, pm_col] = new_pm
+
     rows_to_paste = [
         {"sport": "Development", "training_group": "Development_1", "start_cell": "C6"},
         {"sport": "Development", "training_group": "Development_2", "start_cell": "C8"},
@@ -202,12 +224,10 @@ def generate_excel(selected_date):
             start_cell=row["start_cell"],
         )
 
-    # -------------------------------
-    # Fill in the date cells in the template
     date_cells_groups = [
-        ['C4', 'E4', 'G4', 'I4', 'K4', 'M4', 'O4'],  # Row 4
-        ['C35', 'E35', 'G35', 'I35', 'K35', 'M35', 'O35'],  # Row 35
-        ['C67', 'E67', 'G67', 'I67', 'K67', 'M67', 'O67'],  # Row 67
+        ['C4', 'E4', 'G4', 'I4', 'K4', 'M4', 'O4'],
+        ['C35', 'E35', 'G35', 'I35', 'K35', 'M35', 'O35'],
+        ['C67', 'E67', 'G67', 'I67', 'K67', 'M67', 'O67'],
     ]
     for day_offset, cell_group in enumerate(zip(*date_cells_groups)):
         date_value = (start_date + timedelta(days=day_offset)).strftime('%a %d %b %Y')
@@ -228,14 +248,7 @@ def generate_excel(selected_date):
 
 # ----------------------------------------
 # Function to generate a nicely formatted Word document (Venue Usage Report)
-# This version uses the full filtered data (which includes Session_Type) and
-# displays an extra column for Session Type.
 def generate_venue_usage_report(filtered_df, start_date):
-    """
-    Generates a Word document summarizing venue usage by day.
-    The table has five columns: Date, Time, Session Type, Training Group, and Sport.
-    Rows are shaded based on the day-of-week.
-    """
     doc = Document()
     section = doc.sections[0]
     section.orientation = 1  # Landscape
@@ -247,10 +260,9 @@ def generate_venue_usage_report(filtered_df, start_date):
     title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
     doc.add_paragraph(f'Week Beginning: {start_date.strftime("%d %b %Y")}', style='Normal')
     
-    # Define day-of-week colors:
     day_colors = {
-        "Sunday": "D3D3D3",     # light grey
-        "Monday": "FFFFFF",     # white
+        "Sunday": "D3D3D3",
+        "Monday": "FFFFFF",
         "Tuesday": "D3D3D3",
         "Wednesday": "FFFFFF",
         "Thursday": "D3D3D3",
@@ -258,21 +270,18 @@ def generate_venue_usage_report(filtered_df, start_date):
         "Saturday": "D3D3D3"
     }
     
-    # Get a sorted list of venues (as strings)
     venues = sorted([str(v) for v in filtered_df['Venue'].dropna().unique()])
-    page_capacity = 5  # Maximum venues per page
+    page_capacity = 5
 
     for i in range(0, len(venues), page_capacity):
         if i > 0:
             doc.add_page_break()
         venue_subset = venues[i:i+page_capacity]
         for venue in venue_subset:
-            # Filter data for this venue and sort by Date and Start_Time
             venue_data = filtered_df[filtered_df['Venue'].apply(lambda x: str(x)) == venue].sort_values(by=['Date', 'Start_Time'])
             venue_heading = doc.add_heading(f'📍 {venue}', level=2)
             venue_heading.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-            # Create table with 5 columns: Date, Time, Session Type, Training Group, Sport
             table = doc.add_table(rows=1, cols=5)
             table.style = 'Table Grid'
             hdr_cells = table.rows[0].cells
@@ -289,7 +298,6 @@ def generate_venue_usage_report(filtered_df, start_date):
             
             for _, row in venue_data.iterrows():
                 row_cells = table.add_row().cells
-                # Format date and time strings
                 date_str = row['Date'].strftime('%A %d %b %Y')
                 time_str = f"{row['Start_Time']} - {row['Finish_Time']}"
                 session_type = str(row['Session_Type']) if pd.notnull(row.get('Session_Type')) else ""
@@ -299,7 +307,6 @@ def generate_venue_usage_report(filtered_df, start_date):
                 row_cells[3].text = row['Training_Group']
                 row_cells[4].text = row['Sport']
                 
-                # Determine shading color based on the day-of-week
                 day_name = row['Date'].strftime('%A')
                 color = day_colors.get(day_name, "FFFFFF")
                 for cell in row_cells:
@@ -310,7 +317,6 @@ def generate_venue_usage_report(filtered_df, start_date):
     output.seek(0)
     return output
 
-# --- Streamlit App with Session State for Preserving Generated Data ---
 if "generated" not in st.session_state:
     st.session_state.generated = False
 if "excel_file" not in st.session_state:
@@ -348,7 +354,6 @@ if st.session_state.generated:
         file_name=f"Training_Report_{selected_date.strftime('%d%b%Y')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-
     st.download_button(
         label="📄 Download Venue Usage Report",
         data=st.session_state.venue_file,
