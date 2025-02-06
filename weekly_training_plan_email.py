@@ -331,7 +331,7 @@ for m in no_data_found_messages:
 # 7) Send the email with the attached Excel
 sender_email = "kennymcmillan29@gmail.com"
 receiver_emails = ["kenneth.mcmillan@aspire.qa",
-                   "kennymcmillan29@gmail.com"
+                   "kennymcmillan29@gmail.com",
                     "alessandra.moretti@aspire.qa"
 ]
 
