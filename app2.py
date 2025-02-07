@@ -8,26 +8,31 @@ from openpyxl.styles import Alignment
 import shutil
 import os
 from docx import Document
-from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn  # Needed for setting cell shading
 
+# Additional import for AgGrid (install via: pip install streamlit-aggrid)
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+
 # ---- Page Configuration ----
 st.set_page_config(
     page_title="Operations - Weekly Training Plan",
-    layout="wide",  # Use wide layout
+    layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ---- Custom CSS to hide default Streamlit elements and reduce top spacing ----
-hide_streamlit_style = """
+# ---- Custom CSS ----
+custom_css = """
 <style>
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
+    /* Hide Streamlit default menu and footer */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    /* Increase font size in AgGrid cells */
+    .ag-cell { font-size: 14px; }
 </style>
 """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+st.markdown(custom_css, unsafe_allow_html=True)
 
 # ----------------------------------------
 # Helper function to set cell background color in Word tables
@@ -56,7 +61,7 @@ def ensure_all_columns(pivot_df, day_order):
     return pivot_df.reindex(columns=['Sport', 'Training_Group'] + day_order, fill_value=' ')
 
 # ----------------------------------------
-# Updated function to format session information for grouping in the Excel calendar.
+# Function to format session information for grouping in the Excel calendar.
 def format_session(group):
     tc_sessions = []    # For training camp rows
     other_sessions = [] # For other sessions
@@ -158,14 +163,10 @@ def generate_excel(selected_date):
                                        for time in ['AM', 'PM']]
     pivot_df = ensure_all_columns(pivot_df, day_order)
 
-    # --- Updated Post-processing:
-    # For each day, if one slot (AM or PM) contains "TRAINING CAMP" (case-insensitive),
-    # then ensure both the AM and PM cells for that day include "TRAINING CAMP" as the first line.
+    # Post-process to add "TRAINING CAMP" to both AM and PM cells if needed.
     special_text = "TRAINING CAMP"
     def prepend_special(text):
-        # Remove any leading occurrences of special_text (case-insensitive) and then prepend it.
         lines = text.splitlines()
-        # Remove any line that is exactly the special text (case-insensitive).
         filtered = [line for line in lines if line.strip().upper() != special_text]
         return f"{special_text}" + ("\n" + "\n".join(filtered) if filtered else "")
     
@@ -175,14 +176,9 @@ def generate_excel(selected_date):
         for idx, row in pivot_df.iterrows():
             am_val = str(row.get(am_col, '')).strip()
             pm_val = str(row.get(pm_col, '')).strip()
-            am_has = special_text in am_val.upper()
-            pm_has = special_text in pm_val.upper()
-            if am_has or pm_has:
-                # Prepend the special text to both cells.
-                new_am = prepend_special(am_val)
-                new_pm = prepend_special(pm_val)
-                pivot_df.at[idx, am_col] = new_am
-                pivot_df.at[idx, pm_col] = new_pm
+            if special_text in am_val.upper() or special_text in pm_val.upper():
+                pivot_df.at[idx, am_col] = prepend_special(am_val)
+                pivot_df.at[idx, pm_col] = prepend_special(pm_val)
 
     rows_to_paste = [
         {"sport": "Development", "training_group": "Development_1", "start_cell": "C6"},
@@ -317,6 +313,8 @@ def generate_venue_usage_report(filtered_df, start_date):
     output.seek(0)
     return output
 
+# ----------------------------------------
+# Initialize session state variables
 if "generated" not in st.session_state:
     st.session_state.generated = False
 if "excel_file" not in st.session_state:
@@ -328,12 +326,21 @@ if "pivot_df" not in st.session_state:
 if "filtered_data" not in st.session_state:
     st.session_state.filtered_data = None
 
+# ====================
+# Main App Layout
+# ====================
 st.title("Operations - Weekly Training Plan App")
 st.markdown("Generate Training Calendar and Venue Usage reports for any week from 1st January 2025.")
 
-selected_date = st.date_input("Select a starting date (make sure to choose a SUNDAY!)", value=datetime.now().date())
+# --- Row 1: Date Input ---
+selected_date = st.date_input("Select a starting date (choose a SUNDAY):", value=datetime.now().date())
 
-if st.button("Generate Reports"):
+# --- Row 2: Generate Button and (after generation) Download Buttons ---
+col_generate, col_download = st.columns([1, 1])
+with col_generate:
+    generate_clicked = st.button("Generate Reports")
+
+if generate_clicked:
     try:
         excel_file, pivot_df, filtered_data = generate_excel(selected_date)
         venue_file = generate_venue_usage_report(filtered_data, selected_date)
@@ -345,18 +352,38 @@ if st.button("Generate Reports"):
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
+# --- If generated, show download buttons in the right column of Row 2 ---
 if st.session_state.generated:
-    st.markdown("### Pivot DataFrame for checking data")
-    st.dataframe(st.session_state.pivot_df)
-    st.download_button(
-        label="📅 Download Training Calendar Excel Report",
-        data=st.session_state.excel_file,
-        file_name=f"Training_Report_{selected_date.strftime('%d%b%Y')}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
-    st.download_button(
-        label="📄 Download Venue Usage Report",
-        data=st.session_state.venue_file,
-        file_name=f"Venue_Usage_Report_{selected_date.strftime('%d%b%Y')}.docx",
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    with col_download:
+        st.download_button(
+            label="📅 Download Training Calendar Excel Report",
+            data=st.session_state.excel_file,
+            file_name=f"Training_Report_{selected_date.strftime('%d%b%Y')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        st.download_button(
+            label="📄 Download Venue Usage Report",
+            data=st.session_state.venue_file,
+            file_name=f"Venue_Usage_Report_{selected_date.strftime('%d%b%Y')}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+
+# --- Display the pivot table below (using AgGrid) if generated ---
+if st.session_state.generated:
+    st.markdown("### Pivot DataFrame for Checking Data")
+    # Build grid options from the pivot DataFrame using AgGrid.
+    # Here we double the horizontal length by setting the default minimum width to 300px.
+    gb = GridOptionsBuilder.from_dataframe(st.session_state.pivot_df)
+    gb.configure_default_column(minWidth=300)  # Sets the default minimum width to 300px
+    if "Training_Group" in st.session_state.pivot_df.columns:
+        gb.configure_column("Training_Group", pinned='left', cellStyle={"minWidth": "300px"})
+    gridOptions = gb.build()
+    AgGrid(
+        st.session_state.pivot_df,
+        gridOptions=gridOptions,
+        update_mode=GridUpdateMode.NO_UPDATE,
+        height=400,
+        fit_columns_on_grid_load=True,
+        enable_enterprise_modules=False,
+        allow_unsafe_jscode=True,
     )
