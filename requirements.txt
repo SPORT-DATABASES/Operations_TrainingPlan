@@ -4,3 +4,4 @@ openpyxl
 streamlit
 lxml
 python-docx
+streamlit-aggrid
