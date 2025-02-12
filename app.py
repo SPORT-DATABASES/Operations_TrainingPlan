@@ -49,42 +49,68 @@ def set_cell_background(cell, color):
 # ----------------------------------------
 # Function to adjust timestamps and convert to local time
 def convert_to_time(timestamp_ms, offset_hours=11):
+    if isinstance(timestamp_ms, (pd.Series, list, tuple)):
+        # Handle iterable case
+        return [convert_to_time(x, offset_hours) for x in timestamp_ms]
+    
     try:
         if pd.notnull(timestamp_ms):
             timestamp_s = float(timestamp_ms) / 1000
             return (datetime.fromtimestamp(timestamp_s, tz=timezone.utc) - timedelta(hours=offset_hours)).strftime('%H:%M')
-    except (ValueError, TypeError):
         return None
+    except (ValueError, TypeError) as e:
+        print(f"Error converting timestamp {timestamp_ms}: {str(e)}")
+        return None
+
+# ----------------------------------------
+# Helper function to safely parse a time value (ensuring it is a string in '%H:%M' format)
+def parse_time(time_val):
+    try:
+        # Always convert time_val to string before parsing.
+        return datetime.strptime(str(time_val), '%H:%M')
+    except Exception:
+        return datetime.min
+
+# Helper function to be used as key in sorting.
+def safe_parse(x):
+    # x is expected to be a tuple whose first element is the start time.
+    try:
+        return parse_time(x[0])
+    except Exception:
+        return datetime.min
 
 # Function to ensure all expected columns are present in the pivot DataFrame
 def ensure_all_columns(pivot_df, day_order):
     return pivot_df.reindex(columns=['Sport', 'Training_Group'] + day_order, fill_value=' ')
 
-# Function to format session information for grouping
+# Function to format session information for grouping using itertuples()
 def format_session(group):
+    # Guard: if group is not a DataFrame, return an empty string.
+    if not isinstance(group, pd.DataFrame):
+        return ""
+    
     venue_time_pairs = []
-    for _, row in group.iterrows():
-        type_value = str(row['Session_Type']) if pd.notnull(row['Session_Type']) else ''
-        venue = str(row['Venue']) if pd.notnull(row['Venue']) else ''
-        start_time = str(row['Start_Time']) if pd.notnull(row['Start_Time']) else ''
-        finish_time = str(row['Finish_Time']) if pd.notnull(row['Finish_Time']) else ''
-        time = f"{start_time}-{finish_time}" if start_time or finish_time else ''
+    for row in group.itertuples(index=False):
+        # Access columns as attributes; if a value is missing, use an empty string.
+        type_value = str(row.Session_Type) if pd.notnull(row.Session_Type) else ''
+        venue = str(row.Venue) if pd.notnull(row.Venue) else ''
+        start_time = str(row.Start_Time) if pd.notnull(row.Start_Time) else ''
+        finish_time = str(row.Finish_Time) if pd.notnull(row.Finish_Time) else ''
+        time_str = f"{start_time}-{finish_time}" if start_time or finish_time else ''
 
+        # If any session in the group is a training camp, return immediately.
         if type_value == "Training Camp":
             return "TRAINING CAMP"
 
         if type_value == "Competition":
-            formatted_entry = f"Competition\n{venue}\n{time}".strip()
+            formatted_entry = f"Competition\n{venue}\n{time_str}".strip()
         else:
-            formatted_entry = f"{venue}\n{time}".strip()
+            formatted_entry = f"{venue}\n{time_str}".strip()
 
-        if venue or time or type_value:
+        if venue or time_str or type_value:
             venue_time_pairs.append((start_time, formatted_entry))
 
-    sorted_venue_time_pairs = sorted(
-        venue_time_pairs,
-        key=lambda x: datetime.strptime(x[0], '%H:%M') if x[0] else datetime.min
-    )
+    sorted_venue_time_pairs = sorted(venue_time_pairs, key=safe_parse)
     sorted_sessions = [pair[1] for pair in sorted_venue_time_pairs]
     return '\n'.join(filter(None, sorted_sessions))
 
@@ -130,17 +156,33 @@ def generate_excel(selected_date):
     response.raise_for_status()
     data = pd.read_html(StringIO(response.text))[0]
     df = data.drop(columns=['About'], errors='ignore').drop_duplicates()
-    df.columns = df.columns.str.replace(' ', '_')
+    # Convert column names to strings before replacing spaces
+    df.columns = df.columns.astype(str).str.replace(' ', '_')
+    
     df['Start_Time'] = pd.to_numeric(df['Start_Time'], errors='coerce').apply(lambda x: convert_to_time(x))
     df['Finish_Time'] = pd.to_numeric(df['Finish_Time'], errors='coerce').apply(lambda x: convert_to_time(x))
-    df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
+    df = df[df['Sport'].notna() & (df['Sport'].astype(str).str.strip() != '')]
     df = df[df['Venue'] != 'AASMC']
-    df = df[df['Sport'] != 'Generic Athlete']
+    df = df[df['Sport'] != 'Generic_Athlete']
     df = df[df['Training_Group'] != 'Practice']
 
+    # Convert Date column to date objects
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce', dayfirst=True).dt.date
     filtered_df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
-    filtered_df.loc[:, 'AM/PM'] = pd.Categorical(filtered_df['AM/PM'], categories=['AM', 'PM'], ordered=True)
+    
+    # Ensure key columns are strings and fill missing values.
+    filtered_df['AM/PM'] = filtered_df['AM/PM'].fillna('').astype(str)
+    filtered_df['Session_Type'] = filtered_df['Session_Type'].fillna('').astype(str)
+    
+    # --- NEW: Create a combined Day_AM/PM column for grouping and pivoting ---
+    filtered_df['Day_AM/PM'] = filtered_df.apply(
+        lambda row: row['Date'].strftime('%A') + " " + str(row['AM/PM'])
+        if pd.notnull(row['Date']) and pd.notnull(row['AM/PM']) else '',
+        axis=1
+    )
+    # ---------------------------------------------------------------
+
+    # Sort by these columns (Coach is used only for ordering; if missing, it doesn't matter)
     filtered_df = filtered_df.dropna(subset=['Sport']).sort_values(by=['Date', 'Sport', 'Coach', 'AM/PM'])
 
     grouped = (
@@ -158,7 +200,9 @@ def generate_excel(selected_date):
         fill_value=' '
     ).reset_index()
 
-    day_order = [f"{day} {time}" for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] for time in ['AM', 'PM']]
+    day_order = [f"{day} {time}" for day in 
+                 ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                 for time in ['AM', 'PM']]
     pivot_df = ensure_all_columns(pivot_df, day_order)
 
     rows_to_paste = [
@@ -192,8 +236,8 @@ def generate_excel(selected_date):
         {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C71"},
         {"sport": "Jumps", "training_group": "Jumps_QAF", "start_cell": "C73"},
         {"sport": "Throws", "training_group": "Discus_QAF", "start_cell": "C75"},
-       {"sport": "Throws", "training_group": "Hammer_QAF", "start_cell": "C77"},
-       {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C79"}
+        {"sport": "Throws", "training_group": "Hammer_QAF", "start_cell": "C77"},
+        {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C79"}
     ]
     for row in rows_to_paste:
         paste_filtered_data_to_template(
@@ -291,8 +335,9 @@ def generate_venue_usage_report(filtered_df, start_date):
                 time_str = f"{row['Start_Time']} - {row['Finish_Time']}"
                 row_cells[0].text = date_str
                 row_cells[1].text = time_str
-                row_cells[2].text = row['Training_Group']
-                row_cells[3].text = row['Sport']
+                row_cells[2].text = str(row['Training_Group'])
+                row_cells[3].text = str(row['Sport'])
+
                 
                 # Determine shading color based on the day-of-week
                 day_name = row['Date'].strftime('%A')
@@ -342,7 +387,7 @@ if st.session_state.generated:
         data=st.session_state.excel_file,
         file_name=f"Training_Report_{selected_date.strftime('%d%b%Y')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-)
+    )
 
     st.download_button(
         label="📄 Download Venue Usage Report",
