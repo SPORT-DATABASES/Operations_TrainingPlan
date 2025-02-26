@@ -234,10 +234,16 @@ def generate_excel(selected_date):
         {"sport": "Girls Programe", "training_group": "Youth_U18", "start_cell": "C61"},
         {"sport": "Sprints", "training_group": "Sprints_Short", "start_cell": "C69"},
         {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C71"},
-        {"sport": "Jumps", "training_group": "Jumps_QAF", "start_cell": "C73"},
-        {"sport": "Throws", "training_group": "Discus_QAF", "start_cell": "C75"},
-        {"sport": "Throws", "training_group": "Hammer_QAF", "start_cell": "C77"},
-        {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C79"}
+        {"sport": "Throws", "training_group": "Discus_QAF", "start_cell": "C73"},
+        {"sport": "Throws", "training_group": "Sprints_Rafal", "start_cell": "C75"},
+        {"sport": "Throws", "training_group": "Sprints_Francis", "start_cell": "C77"},
+        {"sport": "Throws", "training_group": "Endurance_Driss", "start_cell": "C79"},
+        {"sport": "Jumps", "training_group": "Endurance_Kada", "start_cell": "C81"},
+        {"sport": "Throws", "training_group": "Discus_QAF", "start_cell": "C83"},
+        {"sport": "Throws", "training_group": "Hammer_QAF", "start_cell": "C85"},
+        {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C87"},
+     
+        
     ]
     for row in rows_to_paste:
         paste_filtered_data_to_template(
