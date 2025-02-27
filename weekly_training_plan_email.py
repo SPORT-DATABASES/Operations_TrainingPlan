@@ -240,8 +240,6 @@ no_data_found_messages = []
 
 rows_to_paste = [
         
-        # first page
-        
         {"sport": "Development", "training_group": "Development 1", "start_cell": "C6"},
         {"sport": "Development", "training_group": "Development 2", "start_cell": "C8"},
         {"sport": "Development", "training_group": "Development 3", "start_cell": "C10"},
@@ -253,15 +251,11 @@ rows_to_paste = [
         {"sport": "Sprints", "training_group": "Sprints_Lee", "start_cell": "C22"},
         {"sport": "Sprints", "training_group": "Sprints_Hamdi", "start_cell": "C24"},
         {"sport": "Throws", "training_group": "Senior Performance Throws", "start_cell": "C26"},
-        
-        # second page
-        
         {"sport": "Squash", "training_group": "Squash", "start_cell": "C37"},
         {"sport": "Table Tennis", "training_group": "Table Tennis", "start_cell": "C39"},
         {"sport": "Fencing", "training_group": "Fencing", "start_cell": "C41"},
         {"sport": "Swimming", "training_group": "Swimming", "start_cell": "C43"},
         {"sport": "Padel", "training_group": "Padel", "start_cell": "C45"},
-        
         {"sport": "Pre Academy Padel", "training_group": "Explorers", "start_cell": "C48"},
         {"sport": "Pre Academy Padel", "training_group": "Explorers+", "start_cell": "C49"},
         {"sport": "Pre Academy Padel", "training_group": "Starters", "start_cell": "C50"},
@@ -272,15 +266,16 @@ rows_to_paste = [
         {"sport": "Girls Programe", "training_group": "Mini Cadet_U14", "start_cell": "C59"},
         {"sport": "Girls Programe", "training_group": "Cadet_U16", "start_cell": "C60"},
         {"sport": "Girls Programe", "training_group": "Youth_U18", "start_cell": "C61"},
-        
-        # third page
-        
         {"sport": "Sprints", "training_group": "Sprints_Short", "start_cell": "C69"},
         {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C71"},
-        {"sport": "Jumps", "training_group": "Jumps_QAF", "start_cell": "C73"},
-          {"sport": "Throws", "training_group": "Discus_QAF", "start_cell": "C75"},
-       {"sport": "Throws", "training_group": "Hammer_QAF", "start_cell": "C77"},
-       {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C79"}
+        {"sport": "Sprints", "training_group": "Sprints_Rafal", "start_cell": "C73"},
+        {"sport": "Sprints", "training_group": "Sprints_Francis", "start_cell": "C75"},
+        {"sport": "Endurance", "training_group": "Endurance_Driss", "start_cell": "C77"},
+        {"sport": "Endurance", "training_group": "Endurance_Kada", "start_cell": "C79"},
+        {"sport": "Jumps", "training_group": "Jumps_QAF", "start_cell": "C81"},
+        {"sport": "Throws", "training_group": "Discus_QAF", "start_cell": "C83"},
+        {"sport": "Throws", "training_group": "Hammer_QAF", "start_cell": "C85"},
+        {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C87"},
     ]
 
 # Paste row-by-row data
