@@ -155,7 +155,8 @@ df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
 df = df[df['Venue'] != 'AASMC']
 
 df['Sport'] = df['Sport'].astype(str).str.strip()  # Remove extra spaces
-df = df[~df['Sport'].str.lower().eq('generic athlete')]
+df = df[~df['Sport'].str.contains('generic athlete', case=False, na=False)]
+
 
 df = df[df['Training_Group'] != 'Practice']
 
