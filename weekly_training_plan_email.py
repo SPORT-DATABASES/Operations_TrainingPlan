@@ -153,7 +153,10 @@ df = df[df['Sport'].notna() & (df['Sport'].str.strip() != '')]
 
 # Exclude this venue
 df = df[df['Venue'] != 'AASMC']
-df = df[df['Sport'] != 'Generic Athlete']
+
+df['Sport'] = df['Sport'].astype(str).str.strip()  # Remove extra spaces
+df = df[~df['Sport'].str.lower().eq('generic athlete')]
+
 df = df[df['Training_Group'] != 'Practice']
 
 # Define date range for the next week
