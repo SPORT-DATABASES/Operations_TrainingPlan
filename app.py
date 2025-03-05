@@ -116,7 +116,7 @@ rows_to_paste = [
     {"sport": "Development", "training_group": "Development 2", "start_cell": "C8", "athlete_count": 11},
     {"sport": "Development", "training_group": "Development 3", "start_cell": "C10", "athlete_count": 9},
     {"sport": "Endurance", "training_group": "Endurance_Senior", "start_cell": "C12", "athlete_count": 18},
-    {"sport": "Jumps", "training_group": "Jumps_PV", "start_cell": "C14", "athlete_count": 5},
+    {"sport": "Jumps", "training_group": "Jumps_Jaco", "start_cell": "C14", "athlete_count": 5},
     {"sport": "Jumps", "training_group": "Jumps_Martin Bercel", "start_cell": "C16", "athlete_count": 5},
     {"sport": "Jumps", "training_group": "Jumps_Ross Jeffs", "start_cell": "C18", "athlete_count": 6},
     {"sport": "Jumps", "training_group": "Jumps_ElWalid", "start_cell": "C20", "athlete_count": 9},
@@ -138,16 +138,24 @@ rows_to_paste = [
     {"sport": "Girls Programe", "training_group": "Mini Cadet_U14", "start_cell": "C59", "athlete_count": 8},
     {"sport": "Girls Programe", "training_group": "Cadet_U16", "start_cell": "C60", "athlete_count": 6},
     {"sport": "Girls Programe", "training_group": "Youth_U18", "start_cell": "C61", "athlete_count": 3},
-    {"sport": "Sprints", "training_group": "Sprints_Short", "start_cell": "C69", "athlete_count": 11},
-    {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C71", "athlete_count": 14},
+
+    {"sport": "Sprints", "training_group": "Sprints_Steve", "start_cell": "C69", "athlete_count": 11},
+    {"sport": "Sprints", "training_group": "Sprints_Kurt", "start_cell": "C71", "athlete_count": 14},
     {"sport": "Sprints", "training_group": "Sprints_Rafal", "start_cell": "C73", "athlete_count": 10},
     {"sport": "Sprints", "training_group": "Sprints_Francis", "start_cell": "C75", "athlete_count": 3},
-    {"sport": "Endurance", "training_group": "Endurance_Driss", "start_cell": "C77", "athlete_count": 10},
-    {"sport": "Endurance", "training_group": "Endurance_Kada", "start_cell": "C79", "athlete_count": 5},
-    {"sport": "Jumps", "training_group": "Jumps_QAF", "start_cell": "C81", "athlete_count": 4},
-    {"sport": "Throws", "training_group": "Discus_QAF", "start_cell": "C83", "athlete_count": 8},
-    {"sport": "Throws", "training_group": "Hammer_QAF", "start_cell": "C85", "athlete_count": 4},
-    {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C87", "athlete_count": 3},
+    {"sport": "Endurance", "training_group": "Sprints_Yasmani", "start_cell": "C77", "athlete_count": 8},
+
+    {"sport": "Endurance", "training_group": "Endurance_Driss", "start_cell": "C81", "athlete_count": 10},
+    {"sport": "Endurance", "training_group": "Endurance_Kada", "start_cell": "C83", "athlete_count": 5},
+    {"sport": "Endurance", "training_group": "Endurance_Khamis", "start_cell": "C85", "athlete_count": 11},
+    {"sport": "Decathlon", "training_group": "Decathlon_QAF", "start_cell": "C87", "athlete_count": 7},
+    
+    {"sport": "Jumps", "training_group": "Jumps_Linus", "start_cell": "C96", "athlete_count": 4},
+    {"sport": "Jumps", "training_group": "Jumps_Pawel", "start_cell": "C98", "athlete_count": 4},
+
+    {"sport": "Throws", "training_group": "Discus_QAF", "start_cell": "C102", "athlete_count": 8},
+    {"sport": "Throws", "training_group": "Hammer_QAF", "start_cell": "C104", "athlete_count": 4},
+    {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C106", "athlete_count": 3},
 ]
 
 # Function to paste filtered data into the Excel template sheet
