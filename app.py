@@ -158,7 +158,7 @@ rows_to_paste = [
     {"sport": "Throws", "training_group": "Throws_Keida", "start_cell": "C106", "athlete_count": 3},
 ]
 
-# Function to paste filtered data into the Excel template sheet
+# Function to paste filtered data into the Excel template sheet    !
 def paste_filtered_data_to_template(pivot_df, workbook, sport, training_group, start_cell):
     template_sheet = workbook["Template"]
     filtered_row = pivot_df[(pivot_df['Sport'] == sport) & (pivot_df['Training_Group'] == training_group)]
