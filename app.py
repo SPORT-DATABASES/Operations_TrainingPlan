@@ -153,9 +153,9 @@ rows_to_paste = [
     {"sport": "Jumps", "training_group": "Jumps_Linus", "start_cell": "C96", "athlete_count": 4},
     {"sport": "Jumps", "training_group": "Jumps_Pawel", "start_cell": "C98", "athlete_count": 4},
 
-    {"sport": "Throws", "training_group": "Discus_QAF", "start_cell": "C102", "athlete_count": 8},
-    {"sport": "Throws", "training_group": "Hammer_QAF", "start_cell": "C104", "athlete_count": 4},
-    {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C106", "athlete_count": 3},
+    {"sport": "Throws", "training_group": "Throws_Kemal", "start_cell": "C102", "athlete_count": 8},
+    {"sport": "Throws", "training_group": "Throws_Krzysztof", "start_cell": "C104", "athlete_count": 4},
+    {"sport": "Throws", "training_group": "Throws_Keida", "start_cell": "C106", "athlete_count": 3},
 ]
 
 # Function to paste filtered data into the Excel template sheet
