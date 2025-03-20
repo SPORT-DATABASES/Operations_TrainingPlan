@@ -1,8 +1,12 @@
-import streamlit as st
-from io import BytesIO, StringIO 
+import os
+import shutil
+from io import BytesIO, StringIO
+from datetime import datetime, timedelta, timezone
+from collections import defaultdict
+
 import requests
 import pandas as pd
-from datetime import datetime, timedelta, timezone
+import streamlit as st
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
 from docx import Document
@@ -10,353 +14,470 @@ from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from typing import Dict, List, Tuple, Optional
-import logging
-import shutil
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# ---- Streamlit Page Configuration ----
+st.set_page_config(
+    page_title="Operations - Weekly Training Plan",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# Define constants
-API_URL = "https://aspire.smartabase.com/aspireacademy/live"
-REPORT_PARAMS = {"report": "PYTHON6_TRAINING_PLAN", "updategroup": True}
+# ---- Custom CSS to Hide Streamlit Defaults ----
+st.markdown(
+    """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
+# ---- Helper Functions for Word Document Formatting ----
+def set_cell_background(cell, color):
+    """
+    Set the background shading color for a docx table cell.
+    :param cell: a docx.table._Cell object
+    :param color: Hex color string (e.g., "ADD8E6")
+    """
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    shd = OxmlElement('w:shd')
+    shd.set(qn('w:val'), 'clear')
+    shd.set(qn('w:color'), 'auto')
+    shd.set(qn('w:fill'), color)
+    tcPr.append(shd)
 
-class TrainingReportGenerator:
-    def __init__(self):
-        self.session = requests.Session()
-        self.session.auth = ("sb_sap.etl", "A1s2p3!re")
+# ---- Time Conversion & Parsing Helpers ----
+def convert_to_time(timestamp_ms, offset_hours=11):
+    """
+    Convert a timestamp in milliseconds to a formatted local time string.
+    Supports both scalar and iterable inputs.
+    """
+    if isinstance(timestamp_ms, (pd.Series, list, tuple)):
+        return [convert_to_time(x, offset_hours) for x in timestamp_ms]
+    try:
+        if pd.notnull(timestamp_ms):
+            ts = float(timestamp_ms) / 1000
+            local_time = datetime.fromtimestamp(ts, tz=timezone.utc) - timedelta(hours=offset_hours)
+            return local_time.strftime('%H:%M')
+        return None
+    except (ValueError, TypeError) as e:
+        st.error(f"Error converting timestamp {timestamp_ms}: {e}")
+        return None
+
+def parse_time(time_val):
+    """
+    Safely parse a time string in '%H:%M' format.
+    """
+    try:
+        return datetime.strptime(str(time_val), '%H:%M')
+    except Exception:
+        return datetime.min
+
+def safe_parse(x):
+    """
+    Helper key function for sorting time-based tuples.
+    """
+    return parse_time(x[0])
+
+# ---- DataFrame Helper Functions ----
+def ensure_all_columns(pivot_df, day_order):
+    """
+    Reindex pivot_df to include all expected day/time columns.
+    """
+    return pivot_df.reindex(columns=['Sport', 'Training_Group'] + day_order, fill_value=' ')
+
+def format_session(group):
+    """
+    Format session information for a given DataFrame group.
+    Uses itertuples() for performance.
+    """
+    if not isinstance(group, pd.DataFrame):
+        return ""
+    
+    venue_time_pairs = []
+    for row in group.itertuples(index=False):
+        type_value = str(row.Session_Type) if pd.notnull(row.Session_Type) else ''
+        venue = str(row.Venue) if pd.notnull(row.Venue) else ''
+        start_time = str(row.Start_Time) if pd.notnull(row.Start_Time) else ''
+        finish_time = str(row.Finish_Time) if pd.notnull(row.Finish_Time) else ''
+        time_str = f"{start_time}-{finish_time}" if start_time or finish_time else ''
         
-    @staticmethod
-    def setup_page():
-        """Configure Streamlit page settings."""
-        st.set_page_config(
-            page_title="Operations - Weekly Training Plan",
-            layout="wide",
-            initial_sidebar_state="expanded"
+        if type_value == "Training Camp":
+            return "TRAINING CAMP"
+        
+        if type_value == "Competition":
+            entry = f"Competition\n{venue}\n{time_str}".strip()
+        else:
+            entry = f"{venue}\n{time_str}".strip()
+        
+        if venue or time_str or type_value:
+            venue_time_pairs.append((start_time, entry))
+    
+    sorted_pairs = sorted(venue_time_pairs, key=safe_parse)
+    sorted_sessions = [pair[1] for pair in sorted_pairs]
+    return '\n'.join(filter(None, sorted_sessions))
+
+# ---- Global Variables ----
+rows_to_paste = [
+    {"sport": "Development", "training_group": "Development 1", "start_cell": "C6", "athlete_count": 14},
+    {"sport": "Development", "training_group": "Development 2", "start_cell": "C8", "athlete_count": 11},
+    {"sport": "Development", "training_group": "Development 3", "start_cell": "C10", "athlete_count": 9},
+    {"sport": "Endurance", "training_group": "Endurance_Senior", "start_cell": "C12", "athlete_count": 18},
+    {"sport": "Jumps", "training_group": "Jumps_Jaco", "start_cell": "C14", "athlete_count": 5},
+    {"sport": "Jumps", "training_group": "Jumps Martin", "start_cell": "C16", "athlete_count": 5},
+    {"sport": "Jumps", "training_group": "Jumps_Ross Jeffs", "start_cell": "C18", "athlete_count": 6},
+    {"sport": "Jumps", "training_group": "Jumps_ElWalid", "start_cell": "C20", "athlete_count": 9},
+    {"sport": "Sprints", "training_group": "Sprints_Lee", "start_cell": "C22", "athlete_count": 8},
+    {"sport": "Sprints", "training_group": "Sprints_Hamdi", "start_cell": "C24", "athlete_count": 9},
+    {"sport": "Throws", "training_group": "Senior Performance Throws", "start_cell": "C26", "athlete_count": 12},
+    {"sport": "Squash", "training_group": "Squash", "start_cell": "C37", "athlete_count": 13},
+    {"sport": "Table Tennis", "training_group": "Table Tennis", "start_cell": "C39", "athlete_count": 5},
+    {"sport": "Fencing", "training_group": "Fencing", "start_cell": "C41", "athlete_count": 16},
+    {"sport": "Swimming", "training_group": "Swimming", "start_cell": "C43", "athlete_count": 16},
+    {"sport": "Padel", "training_group": "Padel", "start_cell": "C45", "athlete_count": 9},
+    {"sport": "Pre Academy Padel", "training_group": "Explorers", "start_cell": "C48", "athlete_count": 10},
+    {"sport": "Pre Academy Padel", "training_group": "Explorers+", "start_cell": "C49", "athlete_count": 10},
+    {"sport": "Pre Academy Padel", "training_group": "Starters", "start_cell": "C50", "athlete_count": 10},
+    {"sport": "Pre Academy", "training_group": "Pre Academy Fencing", "start_cell": "C51", "athlete_count": 10},
+    {"sport": "Pre Academy", "training_group": "Pre Academy Squash Girls", "start_cell": "C53", "athlete_count": 10},
+    {"sport": "Pre Academy", "training_group": "Pre Academy Athletics", "start_cell": "C55", "athlete_count": 10},
+    {"sport": "Girls Programe", "training_group": "Kids", "start_cell": "C58", "athlete_count": 16},
+    {"sport": "Girls Programe", "training_group": "Mini Cadet_U14", "start_cell": "C59", "athlete_count": 8},
+    {"sport": "Girls Programe", "training_group": "Cadet_U16", "start_cell": "C60", "athlete_count": 6},
+    {"sport": "Girls Programe", "training_group": "Youth_U18", "start_cell": "C61", "athlete_count": 3},
+    {"sport": "Sprints", "training_group": "Sprints_Steve", "start_cell": "C69", "athlete_count": 11},
+    {"sport": "Sprints", "training_group": "Sprints_Kurt", "start_cell": "C71", "athlete_count": 14},
+    {"sport": "Sprints", "training_group": "Sprints_Rafal", "start_cell": "C73", "athlete_count": 10},
+    {"sport": "Sprints", "training_group": "Sprints_Francis", "start_cell": "C75", "athlete_count": 3},
+    {"sport": "Sprints", "training_group": "Sprints_Yasmani", "start_cell": "C77", "athlete_count": 8},
+    {"sport": "Endurance", "training_group": "Endurance_Driss", "start_cell": "C81", "athlete_count": 10},
+    {"sport": "Endurance", "training_group": "Endurance_Kada", "start_cell": "C83", "athlete_count": 5},
+    {"sport": "Endurance", "training_group": "Endurance_Khamis", "start_cell": "C85", "athlete_count": 11},
+    {"sport": "Decathlon", "training_group": "Decathlon_Willem", "start_cell": "C87", "athlete_count": 7},
+    {"sport": "Jumps", "training_group": "Jumps_Linus", "start_cell": "C96", "athlete_count": 4},
+    {"sport": "Jumps", "training_group": "Jumps_Pawel", "start_cell": "C98", "athlete_count": 4},
+    {"sport": "Throws", "training_group": "Throws_Kemal", "start_cell": "C102", "athlete_count": 8},
+    {"sport": "Throws", "training_group": "Throws_Krzysztof", "start_cell": "C104", "athlete_count": 4},
+    {"sport": "Throws", "training_group": "Throws_Keida", "start_cell": "C106", "athlete_count": 3},
+]
+
+# ---- Excel Report Functions ----
+def paste_filtered_data_to_template(pivot_df, workbook, sport, training_group, start_cell):
+    """
+    Paste filtered pivot table data into the specified Excel template cell.
+    """
+    template_sheet = workbook["Template"]
+    filtered_row = pivot_df[(pivot_df['Sport'] == sport) & (pivot_df['Training_Group'] == training_group)]
+    if not filtered_row.empty:
+        values_to_paste = filtered_row.iloc[0, 2:].tolist()
+        col_letter, row_num = start_cell[0], int(start_cell[1:])
+        start_col_idx = ord(col_letter.upper()) - ord("A") + 1
+        for col_idx, value in enumerate(values_to_paste, start=start_col_idx):
+            cell = template_sheet.cell(row=row_num, column=col_idx, value=value)
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+@st.cache_data(show_spinner=False)
+def generate_excel(selected_date):
+    """
+    Generate the Excel report based on the selected starting date.
+    Returns the Excel file as a BytesIO object, the pivot DataFrame, and filtered data.
+    """
+    template_path = "Excel_template.xlsx"
+    output_filename = f"Training_Report_{selected_date.strftime('%d%b%Y')}.xlsx"
+    shutil.copy(template_path, output_filename)
+    workbook = load_workbook(output_filename)
+    template_sheet = workbook["Template"]
+
+    start_date = selected_date
+    end_date = start_date + timedelta(days=6)
+    st.write(f"**Selected Date Range:** {start_date.strftime('%a %d %b %Y')} to {end_date.strftime('%a %d %b %Y')}")
+
+    # Fetch and preprocess data
+    session = requests.Session()
+    session.auth = ("sb_sap.etl", "A1s2p3!re")
+    response = session.get("https://aspire.smartabase.com/aspireacademy/live?report=PYTHON6_TRAINING_PLAN&updategroup=true")
+    response.raise_for_status()
+    data = pd.read_html(StringIO(response.text))[0]
+    df = data.drop(columns=['About'], errors='ignore').drop_duplicates()
+    df.columns = df.columns.astype(str).str.replace(' ', '_')
+
+    # Convert timestamps and filter data
+    df['Start_Time'] = pd.to_numeric(df['Start_Time'], errors='coerce').apply(convert_to_time)
+    df['Finish_Time'] = pd.to_numeric(df['Finish_Time'], errors='coerce').apply(convert_to_time)
+    df = df[df['Sport'].notna() & (df['Sport'].astype(str).str.strip() != '')]
+    df = df[(df['Venue'] != 'AASMC') & (df['Sport'] != 'Generic_Athlete') & (df['Training_Group'] != 'Practice')]
+    df['Date'] = pd.to_datetime(df['Date'], errors='coerce', dayfirst=True).dt.date
+
+    filtered_df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
+    filtered_df['AM/PM'] = filtered_df['AM/PM'].fillna('').astype(str)
+    filtered_df['Session_Type'] = filtered_df['Session_Type'].fillna('').astype(str)
+    filtered_df['Day_AM/PM'] = filtered_df.apply(
+        lambda row: row['Date'].strftime('%A') + " " + str(row['AM/PM']) if pd.notnull(row['Date']) else '',
+        axis=1
+    )
+    filtered_df = filtered_df.dropna(subset=['Sport']).sort_values(by=['Date', 'Sport', 'Coach', 'AM/PM'])
+
+    # Group sessions and create pivot table
+    grouped = (
+        filtered_df.groupby(['Sport', 'Training_Group', 'Day_AM/PM', 'Session_Type'])
+        .apply(format_session)
+        .reset_index(name='Session')
+    )
+    pivot_df = pd.pivot_table(
+        grouped,
+        values='Session',
+        index=['Sport', 'Training_Group'],
+        columns=['Day_AM/PM'],
+        aggfunc=lambda x: "\n".join(x),
+        fill_value=' '
+    ).reset_index()
+
+    day_order = [f"{day} {time}" for day in 
+                 ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                 for time in ['AM', 'PM']]
+    pivot_df = ensure_all_columns(pivot_df, day_order)
+
+    # Paste pivot data into Excel template
+    for row in rows_to_paste:
+        paste_filtered_data_to_template(
+            pivot_df=pivot_df,
+            workbook=workbook,
+            sport=row["sport"],
+            training_group=row["training_group"],
+            start_cell=row["start_cell"],
         )
-        st.markdown("""
-            <style>
-                #MainMenu {visibility: hidden;}
-                footer {visibility: hidden;}
-            </style>
-        """, unsafe_allow_html=True)
 
-    @staticmethod
-    def convert_timestamp(ms: float, offset_hours: int = 11) -> Optional[str]:
-        """Convert millisecond timestamp to local time string."""
-        try:
-            if pd.isna(ms):
-                return None
-            dt = datetime.fromtimestamp(float(ms)/1000, tz=timezone.utc)
-            return (dt - timedelta(hours=offset_hours)).strftime('%H:%M')
-        except (ValueError, TypeError):
-            logger.error(f"Failed to convert timestamp {ms}")
-            return None
-
-    def fetch_training_data(self) -> pd.DataFrame:
-        """Fetch and preprocess training data."""
-        try:
-            logger.info("Fetching training data from API")
-            response = self.session.get(API_URL, params=REPORT_PARAMS)
-            response.raise_for_status()
-            
-            df = pd.read_html(StringIO(response.text))[0]
-            
-            # Clean and optimize dataframe
-            if 'About' in df.columns:
-                df.drop(columns=['About'], inplace=True)
-            
-            df.drop_duplicates(inplace=True)
-            df.columns = df.columns.str.replace(' ', '_')
-            
-            # Convert numeric columns efficiently
-            for col in ['Start_Time', 'Finish_Time']:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-                df[col] = df[col].apply(self.convert_timestamp)
-            
-            # Filter invalid entries with explicit type conversion
-            mask = (
-                df['Sport'].notna() & 
-                df['Sport'].astype(str).str.strip().ne('') &
-                df['Venue'].fillna('').ne('AASMC') &
-                df['Sport'].fillna('').ne('Generic_Athlete') &
-                df['Training_Group'].fillna('').ne('Practice')
-            )
-            
-            logger.info(f"Fetched {len(df[mask])} valid training records")
-            return df[mask].reset_index(drop=True)
-            
-        except Exception as e:
-            logger.error(f"Failed to fetch training data: {str(e)}")
-            raise
-
-    def generate_excel_report(self, selected_date: datetime.date) -> Tuple[BytesIO, pd.DataFrame]:
-        """Generate Excel report for the selected date range."""
-        template_path = "Excel_template.xlsx"
-        output_filename = f"Training_Report_{selected_date.strftime('%d%b%Y')}.xlsx"
-        
-        try:
-            shutil.copy(template_path, output_filename)
-            workbook = load_workbook(output_filename)
-            template_sheet = workbook["Template"]
-            
-            df = self.fetch_training_data()
-            df['Date'] = pd.to_datetime(df['Date'], errors='coerce', dayfirst=True).dt.date
-            
-            # Optimize filtering
-            filtered_df = df[
-                (df['Date'] >= selected_date) & 
-                (df['Date'] <= selected_date + timedelta(days=6))
-            ].copy()
-            
-            # Create efficient grouping
-            pivot_df = (
-                filtered_df.groupby(['Sport', 'Training_Group'])
-                .agg({
-                    'Session_Type': lambda x: '\n'.join(x),
-                    'Venue': lambda x: '\n'.join(x),
-                    'Start_Time': lambda x: '\n'.join(map(str, x)),
-                    'Finish_Time': lambda x: '\n'.join(map(str, x))
-                })
-                .reset_index()
-            )
-            
-            # Define sport configurations
-            SPORT_CONFIGS = [
-                {"sport": "Development", "group": "Development 1", "cell": "C6"},
-                {"sport": "Development", "group": "Development 2", "cell": "C8"},
-                {"sport": "Development", "training_group": "Development 3", "start_cell": "C10"},
-        {"sport": "Endurance", "training_group": "Endurance_Senior", "start_cell": "C12"},
-        {"sport": "Jumps", "training_group": "Jumps_PV", "start_cell": "C14"},
-        {"sport": "Jumps", "training_group": "Jumps_Martin Bercel", "start_cell": "C16"},
-        {"sport": "Jumps", "training_group": "Jumps_Ross Jeffs", "start_cell": "C18"},
-        {"sport": "Jumps", "training_group": "Jumps_ElWalid", "start_cell": "C20"},
-        {"sport": "Sprints", "training_group": "Sprints_Lee", "start_cell": "C22"},
-        {"sport": "Sprints", "training_group": "Sprints_Hamdi", "start_cell": "C24"},
-        {"sport": "Throws", "training_group": "Senior Performance Throws", "start_cell": "C26"},
-        {"sport": "Squash", "training_group": "Squash", "start_cell": "C37"},
-        {"sport": "Table Tennis", "training_group": "Table Tennis", "start_cell": "C39"},
-        {"sport": "Fencing", "training_group": "Fencing", "start_cell": "C41"},
-        {"sport": "Swimming", "training_group": "Swimming", "start_cell": "C43"},
-        {"sport": "Padel", "training_group": "Padel", "start_cell": "C45"},
-        {"sport": "Pre Academy Padel", "training_group": "Explorers", "start_cell": "C48"},
-        {"sport": "Pre Academy Padel", "training_group": "Explorers+", "start_cell": "C49"},
-        {"sport": "Pre Academy Padel", "training_group": "Starters", "start_cell": "C50"},
-        {"sport": "Pre Academy", "training_group": "Pre Academy Fencing", "start_cell": "C51"},
-        {"sport": "Pre Academy", "training_group": "Pre Academy Squash Girls", "start_cell": "C53"},
-        {"sport": "Pre Academy", "training_group": "Pre Academy Athletics", "start_cell": "C55"},
-        {"sport": "Girls Programe", "training_group": "Kids", "start_cell": "C58"},
-        {"sport": "Girls Programe", "training_group": "Mini Cadet_U14", "start_cell": "C59"},
-        {"sport": "Girls Programe", "training_group": "Cadet_U16", "start_cell": "C60"},
-        {"sport": "Girls Programe", "training_group": "Youth_U18", "start_cell": "C61"},
-        {"sport": "Sprints", "training_group": "Sprints_Short", "start_cell": "C69"},
-        {"sport": "Sprints", "training_group": "Sprints_Long", "start_cell": "C71"},
-        {"sport": "Jumps", "training_group": "Jumps_QAF", "start_cell": "C73"},
-        {"sport": "Throws", "training_group": "Discus_QAF", "start_cell": "C75"},
-        {"sport": "Throws", "training_group": "Hammer_QAF", "start_cell": "C77"},
-        {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C79"},
-      #  {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C79"},
-       # {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C79"},
-       # {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C79"},
-       # {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C79"}
-    ]
-            
-            
-            # Batch update cells
-            for config in SPORT_CONFIGS:
-                filtered_row = pivot_df[
-                    (pivot_df['Sport'] == config["sport"]) &
-                    (pivot_df['Training_Group'] == config["group"])
-                ].iloc[0].copy()
-                
-                col_letter, row_num = config["cell"][0], int(config["cell"][1:])
-                start_col_idx = ord(col_letter.upper()) - ord("A") + 1
-                
-                for col_idx, value in enumerate(filtered_row.values[2:], start=start_col_idx):
-                    cell = template_sheet.cell(row=row_num, column=col_idx, value=value)
-                    cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-            
-            # Update dates efficiently
-            date_cells_groups = [
-                   ['C4', 'E4', 'G4', 'I4', 'K4', 'M4', 'O4'],
+    # Set date cells in template
+    date_cells_groups = [
+        ['C4', 'E4', 'G4', 'I4', 'K4', 'M4', 'O4'],
         ['C35', 'E35', 'G35', 'I35', 'K35', 'M35', 'O35'],
         ['C67', 'E67', 'G67', 'I67', 'K67', 'M67', 'O67'],
-            ]
-            
-            
-            for day_offset, cell_group in enumerate(zip(*date_cells_groups)):
-                date_value = (selected_date + timedelta(days=day_offset)).strftime('%a %d %b %Y')
-                for cell in cell_group:
-                    template_sheet[cell].value = date_value
-                    template_sheet[cell].alignment = Alignment(
-                        horizontal="center",
-                        vertical="center"
-                    )
-            
-            week_number = selected_date.isocalendar()[1]
-            week_beginning_text = f"Week beginning {selected_date.strftime('%d %b')}\nWeek {week_number}"
-            
-            for cell in ["O2", "O33", "O65"]:
-                template_sheet[cell].value = week_beginning_text
-                template_sheet[cell].alignment = Alignment(
-                    horizontal="center",
-                    vertical="center",
-                    wrap_text=True
-                )
-            
-            output = BytesIO()
-            workbook.save(output)
-            output.seek(0)
-            
-            return output, pivot_df
-        
-        except Exception as e:
-            logger.error(f"Failed to generate Excel report: {str(e)}")
-            raise
+    ]
+    for day_offset, cell_group in enumerate(zip(*date_cells_groups)):
+        date_value = (start_date + timedelta(days=day_offset)).strftime('%a %d %b %Y')
+        for cell in cell_group:
+            template_sheet[cell].value = date_value
+            template_sheet[cell].alignment = Alignment(horizontal="center", vertical="center")
 
-class VenueReportGenerator:
-    @staticmethod
-    def generate_venue_usage_report(filtered_df: pd.DataFrame, start_date: datetime.date) -> BytesIO:
-        """Generate Word document summarizing venue usage."""
-        doc = Document()
-        section = doc.sections[0]
-        section.orientation = 1  # Landscape
-        
-        # Set page dimensions efficiently
-        new_width, new_height = section.page_height, section.page_width
-        section.page_width = new_width
-        section.page_height = new_height
-        
-        # Add header
-        title = doc.add_heading('Venue Usage Report', level=1)
-        title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        doc.add_paragraph(f'Week Beginning: {start_date.strftime("%d %b %Y")}', style='Normal')
-        
-        # Define colors once
-        DAY_COLORS = {
-            "Sunday": "D3D3D3",     # light grey
-            "Monday": "FFFFFF",     # white
-            "Tuesday": "D3D3D3",
-            "Wednesday": "FFFFFF",
-            "Thursday": "D3D3D3",
-            "Friday": "FFFFFF",
-            "Saturday": "D3D3D3"
-        }
-        
-        # Get unique venues once
-        venues = sorted([str(v) for v in filtered_df['Venue'].dropna().unique()])
-        page_capacity = 5
-        
-        for i in range(0, len(venues), page_capacity):
-            if i > 0:
-                doc.add_page_break()
-            
-            venue_subset = venues[i:i+page_capacity]
-            for venue in venue_subset:
-                venue_data = filtered_df[
-                    filtered_df['Venue'].apply(lambda x: str(x)) == venue
-                ].sort_values(by=['Date', 'Start_Time'])
-                
-                # Add venue header
-                venue_heading = doc.add_heading(f'📍 {venue}', level=2)
-                venue_heading.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                
-                # Create table template once
-                table = doc.add_table(rows=1, cols=4)
-                table.style = 'Table Grid'
-                
-                # Set headers once
-                hdr_cells = table.rows[0].cells
-                for cell, text in zip(hdr_cells, ['Date', 'Time', 'Training Group', 'Sport']):
-                    cell.text = text
-                    cell.paragraphs[0].runs[0].bold = True
-                    cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-                    VenueReportGenerator._set_cell_background(cell, "ADD8E6")
-                
-                # Add rows efficiently
-                for _, row in venue_data.iterrows():
-                    cells = table.add_row().cells
-                    
-                    date_str = row['Date'].strftime('%A %d %b %Y')
-                    time_str = f"{row['Start_Time']} - {row['Finish_Time']}"
-                    
-                    cells[0].text = date_str
-                    cells[1].text = time_str
-                    cells[2].text = str(row['Training_Group'])
-                    cells[3].text = str(row['Sport'])
-                    
-                    day_name = row['Date'].strftime('%A')
-                    color = DAY_COLORS.get(day_name, "FFFFFF")
-                    for cell in cells:
-                        VenueReportGenerator._set_cell_background(cell, color)
-        
-        output = BytesIO()
-        doc.save(output)
-        output.seek(0)
-        return output
+    week_number = start_date.isocalendar()[1]
+    week_beginning_text = f"Week beginning {start_date.strftime('%d %b')}\nWeek {week_number}"
+    for cell in ["O2", "O33", "O65"]:
+        template_sheet[cell].value = week_beginning_text
+        template_sheet[cell].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    return output, pivot_df, filtered_df
+
+# ---- Word Report Functions ----
+def generate_venue_usage_report(filtered_df, start_date):
+    """
+    Generate a Word document for venue usage.
+    """
+    doc = Document()
+    section = doc.sections[0]
+    # Set landscape orientation
+    section.orientation = 1  
+    section.page_width, section.page_height = section.page_height, section.page_width
+
+    title = doc.add_heading('Venue Usage Report', level=1)
+    title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph(f'Week Beginning: {start_date.strftime("%d %b %Y")}', style='Normal')
+
+    # Define day-specific colors and build athlete count mapping
+    day_colors = {
+        "Sunday": "D3D3D3",
+        "Monday": "FFFFFF",
+        "Tuesday": "D3D3D3",
+        "Wednesday": "FFFFFF",
+        "Thursday": "D3D3D3",
+        "Friday": "FFFFFF",
+        "Saturday": "D3D3D3"
+    }
+    athlete_count_map = {
+        (row["sport"], row["training_group"]): row.get("athlete_count", 10)
+        for row in rows_to_paste
+    }
+    venues = sorted(filtered_df['Venue'].dropna().astype(str).unique())
+    page_capacity = 5
+
+    for i in range(0, len(venues), page_capacity):
+        if i > 0:
+            doc.add_page_break()
+        for venue in venues[i:i+page_capacity]:
+            venue_data = filtered_df[filtered_df['Venue'].astype(str) == venue].sort_values(by=['Date', 'Start_Time'])
+            heading = doc.add_heading(f'📍 {venue}', level=2)
+            heading.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+            table = doc.add_table(rows=1, cols=5)
+            table.style = 'Table Grid'
+            hdr_cells = table.rows[0].cells
+            for header, cell in zip(['Date', 'Time', 'Training Group', 'Sport', 'Athletes'], hdr_cells):
+                cell.text = header
+                cell.paragraphs[0].runs[0].bold = True
+                cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                set_cell_background(cell, "ADD8E6")
+
+            for _, row in venue_data.iterrows():
+                row_cells = table.add_row().cells
+                date_str = row['Date'].strftime('%A %d %b %Y')
+                time_str = f"{row['Start_Time']} - {row['Finish_Time']}"
+                training_group = str(row['Training_Group'])
+                sport = str(row['Sport'])
+                athlete_count = athlete_count_map.get((sport, training_group), 10)
+                for idx, text in enumerate([date_str, time_str, training_group, sport, str(athlete_count)]):
+                    row_cells[idx].text = text
+                # Set background based on day of week
+                day_name = row['Date'].strftime('%A')
+                color = day_colors.get(day_name, "FFFFFF")
+                for cell in row_cells:
+                    set_cell_background(cell, color)
+
+    output = BytesIO()
+    doc.save(output)
+    output.seek(0)
+    return output
+
+def generate_max_occupancy_report(filtered_df, start_date):
+    """
+    Generate a Word report that shows, for each venue and date,
+    the maximum number of people in any 30-minute interval and the groups present.
+    """
+    athlete_count_map = {
+        (row["sport"], row["training_group"]): row.get("athlete_count", 10)
+        for row in rows_to_paste
+    }
     
-    @staticmethod
-    def _set_cell_background(cell, color):
-        """Helper method to set cell background color."""
-        tc = cell._tc
-        tcPr = tc.get_or_add_tcPr()
-        shd = OxmlElement('w:shd')
-        shd.set(qn('w:val'), 'clear')
-        shd.set(qn('w:color'), 'auto')
-        shd.set(qn('w:fill'), color)
-        tcPr.append(shd)
-
-class TrainingApp:
-    def __init__(self):
-        self.excel_generator = TrainingReportGenerator()
-        self.venue_generator = VenueReportGenerator()
-        
-        # Initialize session state once
-        if "generated" not in st.session_state:
-            st.session_state.generated = False
-            st.session_state.excel_file = None
-            st.session_state.pivot_df = None
-            st.session_state.filtered_data = None
-            st.session_state.venue_file = None
-            
-    def run(self):
-        """Main application runner."""
-        TrainingReportGenerator.setup_page()
-        st.title("Operations - Weekly Training Plan App")
-        st.markdown("Generate Training Calendar and Venue Usage reports for any week from 1st January 2025.")
-        
-        selected_date = st.date_input(
-            "Select a starting date (make sure to choose a SUNDAY!)",
-            value=datetime.now().date(),
-            min_value=datetime(2025, 1, 1).date()
-        )
-        
-        if st.button("Generate Reports"):
+    report_rows = []
+    for (date, venue), group in filtered_df.groupby(['Date', 'Venue']):
+        sessions = []
+        for _, row in group.iterrows():
             try:
-                excel_file, pivot_df = self.excel_generator.generate_excel_report(selected_date)
-                
-                # Filter data for venue report
-                df = self.excel_generator.fetch_training_data()
-                df['Date'] = pd.to_datetime(df['Date'], errors='coerce', dayfirst=True).dt.date
-                filtered_data = df[
-                    (df['Date'] >= selected_date) & 
-                    (df['Date'] <= selected_date + timedelta(days=6))
-                ].copy()
-                
-                venue_file = self.venue_generator.generate_venue_usage_report(filtered_data, selected_date)
-                
-                st.session_state.excel_file = excel_file
-                st.session_state.pivot_df = pivot_df
-                st.session_state.filtered_data = filtered_data
-                st.session_state.venue_file = venue_file
-                st.session_state.generated = True
-                
-            except Exception as e:
-                logger.error(f"Error generating reports: {str(e)}")
-                st.error(f"An error occurred: {str(e)}")
+                start_dt = datetime.combine(date, datetime.strptime(row['Start_Time'], "%H:%M").time())
+                finish_dt = datetime.combine(date, datetime.strptime(row['Finish_Time'], "%H:%M").time())
+            except Exception:
+                continue
+            athlete_count = athlete_count_map.get((str(row['Sport']), str(row['Training_Group'])), 10)
+            group_id = f"{str(row['Sport'])} - {str(row['Training_Group'])}"
+            sessions.append({
+                'start': start_dt,
+                'finish': finish_dt,
+                'count': athlete_count,
+                'group': group_id
+            })
+        if not sessions:
+            continue
 
-if __name__ == "__main__":
-    app = TrainingApp()
-    app.run()
+        candidate_times = sorted({s['start'] for s in sessions} | {s['finish'] for s in sessions})
+        max_occupancy = 0
+        best_interval = None
+        best_groups = set()
+        for cand in candidate_times:
+            window_start = cand
+            window_end = cand + timedelta(minutes=30)
+            overlapping = [s for s in sessions if s['start'] < window_end and s['finish'] > window_start]
+            occupancy = sum(s['count'] for s in overlapping)
+            if occupancy > max_occupancy:
+                max_occupancy = occupancy
+                best_interval = (window_start.strftime("%H:%M"), window_end.strftime("%H:%M"))
+                best_groups = {s['group'] for s in overlapping}
+        report_rows.append({
+            'Date': date.strftime("%A %d %b %Y"),
+            'Venue': venue,
+            'Interval': f"{best_interval[0]} - {best_interval[1]}" if best_interval else "N/A",
+            'Max Occupancy': max_occupancy,
+            'Groups': ", ".join(sorted(best_groups)) if best_groups else "N/A"
+        })
+
+    doc = Document()
+    doc.add_heading("Maximum Occupancy Report", level=1)
+    doc.add_paragraph(f"Week Beginning: {start_date.strftime('%d %b %Y')}")
+
+    table = doc.add_table(rows=1, cols=5)
+    table.style = 'Table Grid'
+    for header, cell in zip(["Date", "Venue", "30-min Interval", "Max Occupancy", "Groups"], table.rows[0].cells):
+        cell.text = header
+        cell.paragraphs[0].runs[0].bold = True
+        cell.paragraphs[0].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+    for row_data in report_rows:
+        cells = table.add_row().cells
+        cells[0].text = row_data['Date']
+        cells[1].text = row_data['Venue']
+        cells[2].text = row_data['Interval']
+        cells[3].text = str(row_data['Max Occupancy'])
+        cells[4].text = row_data['Groups']
+
+    output = BytesIO()
+    doc.save(output)
+    output.seek(0)
+    return output
+
+# ---- Streamlit App State and UI ----
+if "generated" not in st.session_state:
+    st.session_state.generated = False
+if "excel_file" not in st.session_state:
+    st.session_state.excel_file = None
+if "venue_file" not in st.session_state:
+    st.session_state.venue_file = None
+if "max_occ_file" not in st.session_state:
+    st.session_state.max_occ_file = None
+if "pivot_df" not in st.session_state:
+    st.session_state.pivot_df = None
+if "filtered_data" not in st.session_state:
+    st.session_state.filtered_data = None
+
+st.title("Operations - Weekly Training Plan App")
+st.markdown("Generate Training Calendar and Venue Usage reports for any week from 1st January 2025.")
+
+selected_date = st.date_input("Select a starting date (choose a SUNDAY)", value=datetime.now().date())
+
+if st.button("Generate Reports"):
+    try:
+        excel_file, pivot_df, filtered_data = generate_excel(selected_date)
+        venue_file = generate_venue_usage_report(filtered_data, selected_date)
+        max_occ_file = generate_max_occupancy_report(filtered_data, selected_date)
+        st.session_state.excel_file = excel_file
+        st.session_state.pivot_df = pivot_df
+        st.session_state.filtered_data = filtered_data
+        st.session_state.venue_file = venue_file
+        st.session_state.max_occ_file = max_occ_file
+        st.session_state.generated = True
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+
+if st.session_state.generated:
+    st.markdown("### Pivot DataFrame for Checking Data")
+    # Option 1: Simple full-width display
+    st.dataframe(st.session_state.pivot_df, use_container_width=True)
+    
+    # Option 2: Styled display with text wrapping and centered headers
+    styled_df = st.session_state.pivot_df.style.set_properties(
+        **{'white-space': 'pre-wrap', 'text-align': 'center'}
+    ).set_table_styles(
+        [{'selector': 'th', 'props': [('text-align', 'center')]}]
+    )
+    st.markdown("### Styled Pivot DataFrame for Checking Data")
+    st.dataframe(styled_df, use_container_width=True)
+    
+    st.download_button(
+        label="📅 Download Training Calendar Excel Report",
+        data=st.session_state.excel_file,
+        file_name=f"Training_Report_{selected_date.strftime('%d%b%Y')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    st.download_button(
+        label="📄 Download Venue Usage Report",
+        data=st.session_state.venue_file,
+        file_name=f"Venue_Usage_Report_{selected_date.strftime('%d%b%Y')}.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+    st.download_button(
+        label="📈 Download Maximum Occupancy Report",
+        data=st.session_state.max_occ_file,
+        file_name=f"Max_Occupancy_Report_{selected_date.strftime('%d%b%Y')}.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
