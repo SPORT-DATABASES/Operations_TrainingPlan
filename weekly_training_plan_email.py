@@ -242,13 +242,15 @@ for cell in ["O2", "O33", "O65"]:
 # 4) Paste data - Collect missing data messages in a list
 no_data_found_messages = []
 
+# Global dictionary with athlete count placeholders (each group has 10 athletes)
 rows_to_paste = [
     {"sport": "Development", "training_group": "Development 1", "start_cell": "C6", "athlete_count": 14},
     {"sport": "Development", "training_group": "Development 2", "start_cell": "C8", "athlete_count": 11},
     {"sport": "Development", "training_group": "Development 3", "start_cell": "C10", "athlete_count": 9},
+    
     {"sport": "Endurance", "training_group": "Endurance_Senior", "start_cell": "C12", "athlete_count": 18},
     {"sport": "Jumps", "training_group": "Jumps_Jaco", "start_cell": "C14", "athlete_count": 5},
-    {"sport": "Jumps", "training_group": "Jumps_Martin Bercel", "start_cell": "C16", "athlete_count": 5},
+    {"sport": "Jumps", "training_group": "Jumps Martin", "start_cell": "C16", "athlete_count": 5},
     {"sport": "Jumps", "training_group": "Jumps_Ross Jeffs", "start_cell": "C18", "athlete_count": 6},
     {"sport": "Jumps", "training_group": "Jumps_ElWalid", "start_cell": "C20", "athlete_count": 9},
     {"sport": "Sprints", "training_group": "Sprints_Lee", "start_cell": "C22", "athlete_count": 8},
@@ -284,9 +286,9 @@ rows_to_paste = [
     {"sport": "Jumps", "training_group": "Jumps_Linus", "start_cell": "C96", "athlete_count": 4},
     {"sport": "Jumps", "training_group": "Jumps_Pawel", "start_cell": "C98", "athlete_count": 4},
 
-    {"sport": "Throws", "training_group": "Discus_QAF", "start_cell": "C102", "athlete_count": 8},
-    {"sport": "Throws", "training_group": "Hammer_QAF", "start_cell": "C104", "athlete_count": 4},
-    {"sport": "Throws", "training_group": "Javelin_QAF", "start_cell": "C106", "athlete_count": 3},
+    {"sport": "Throws", "training_group": "Throws_Kemal", "start_cell": "C102", "athlete_count": 8},
+    {"sport": "Throws", "training_group": "Throws_Krzysztof", "start_cell": "C104", "athlete_count": 4},
+    {"sport": "Throws", "training_group": "Throws_Keida", "start_cell": "C106", "athlete_count": 3},
 ]
 
 # Paste row-by-row data

@@ -118,7 +118,7 @@ rows_to_paste = [
     
     {"sport": "Endurance", "training_group": "Endurance_Senior", "start_cell": "C12", "athlete_count": 18},
     {"sport": "Jumps", "training_group": "Jumps_Jaco", "start_cell": "C14", "athlete_count": 5},
-    {"sport": "Jumps", "training_group": "Jumps_Martin Bercel", "start_cell": "C16", "athlete_count": 5},
+    {"sport": "Jumps", "training_group": "Jumps Martin", "start_cell": "C16", "athlete_count": 5},
     {"sport": "Jumps", "training_group": "Jumps_Ross Jeffs", "start_cell": "C18", "athlete_count": 6},
     {"sport": "Jumps", "training_group": "Jumps_ElWalid", "start_cell": "C20", "athlete_count": 9},
     {"sport": "Sprints", "training_group": "Sprints_Lee", "start_cell": "C22", "athlete_count": 8},
