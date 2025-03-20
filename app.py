@@ -144,12 +144,12 @@ rows_to_paste = [
     {"sport": "Sprints", "training_group": "Sprints_Kurt", "start_cell": "C71", "athlete_count": 14},
     {"sport": "Sprints", "training_group": "Sprints_Rafal", "start_cell": "C73", "athlete_count": 10},
     {"sport": "Sprints", "training_group": "Sprints_Francis", "start_cell": "C75", "athlete_count": 3},
-    {"sport": "Endurance", "training_group": "Sprints_Yasmani", "start_cell": "C77", "athlete_count": 8},
+    {"sport": "Sprints", "training_group": "Sprints_Yasmani", "start_cell": "C77", "athlete_count": 8},
 
     {"sport": "Endurance", "training_group": "Endurance_Driss", "start_cell": "C81", "athlete_count": 10},
     {"sport": "Endurance", "training_group": "Endurance_Kada", "start_cell": "C83", "athlete_count": 5},
     {"sport": "Endurance", "training_group": "Endurance_Khamis", "start_cell": "C85", "athlete_count": 11},
-    {"sport": "Decathlon", "training_group": "Decathlon_QAF", "start_cell": "C87", "athlete_count": 7},
+    {"sport": "Decathlon", "training_group": "Decathlon_Willem", "start_cell": "C87", "athlete_count": 7},
     
     {"sport": "Jumps", "training_group": "Jumps_Linus", "start_cell": "C96", "athlete_count": 4},
     {"sport": "Jumps", "training_group": "Jumps_Pawel", "start_cell": "C98", "athlete_count": 4},
