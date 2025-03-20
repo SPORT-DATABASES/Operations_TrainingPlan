@@ -235,7 +235,7 @@ def generate_excel(selected_date):
         values='Session',
         index=['Sport', 'Training_Group'],
         columns=['Day_AM/PM'],
-        aggfunc='first',
+        aggfunc=lambda x: "\n".join(x),  # Concatenate all session strings
         fill_value=' '
     ).reset_index()
 

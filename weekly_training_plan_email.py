@@ -182,7 +182,7 @@ pivot_df = pd.pivot_table(
     values='Session',
     index=['Sport', 'Training_Group'],
     columns=['Day_AM/PM'],
-    aggfunc='first',
+    aggfunc=lambda x: "\n".join(x),  # Concatenate all session strings
     fill_value=' '
 ).reset_index()
 
@@ -374,3 +374,7 @@ with smtplib.SMTP('smtp.gmail.com', 587) as server:
     server.send_message(msg)
 
 print('Excel report generated and emailed successfully.')
+
+
+df.to_csv('df.csv', index=False)
+grouped.to_csv('grouped.csv', index=False)
