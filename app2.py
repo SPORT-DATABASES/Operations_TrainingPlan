@@ -55,7 +55,7 @@ def set_cell_background(cell, color):
 
 # ----------------------------------------
 # Function to adjust timestamps and convert to local time
-def convert_to_time(timestamp_ms, offset_hours=10):
+def convert_to_time(timestamp_ms, offset_hours=12):
     if isinstance(timestamp_ms, (pd.Series, list, tuple)):
         # Handle iterable case using list comprehension
         return [(datetime.fromtimestamp(float(x) / 1000, tz=timezone.utc) - timedelta(hours=offset_hours)).strftime('%H:%M')
